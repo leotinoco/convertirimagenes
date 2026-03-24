@@ -158,59 +158,99 @@ class MainWindow(ctk.CTk):
         cfg.grid(row=0, column=0, sticky="ew", padx=12, pady=12)
         cfg.columnconfigure((0, 1, 2, 3), weight=1)
 
-        # ---- Quality preset ----
+        # ---- Quality Slider ----
         q_lbl = ctk.CTkLabel(
-            cfg, text="🎯  Calidad de compresión",
+            cfg, text="🎯  Calidad de compresión (Photoshop High = 65)",
             font=("Segoe UI Semibold", 12), anchor="w"
         )
-        q_lbl.grid(row=0, column=0, columnspan=4, sticky="w", padx=12, pady=(10, 4))
+        q_lbl.grid(row=0, column=0, columnspan=3, sticky="w", padx=12, pady=(10, 0))
 
-        self._quality_var = tk.StringVar(value="medium")
-        quality_opts = [
-            ("🏅 Alta calidad",       "high",   "#14532d", "#22c55e"),
-            ("⚖  Calidad media",      "medium", "#1e3a5f", "#6aadff"),
-            ("📦 Baja calidad",       "low",    "#4a1a00", "#f97316"),
-        ]
-        self._q_buttons: dict[str, ctk.CTkButton] = {}
-        for col, (label, value, bg, fg) in enumerate(quality_opts):
-            btn = ctk.CTkButton(
-                cfg,
-                text=label,
-                font=("Segoe UI", 12),
-                fg_color=bg if value == "medium" else "#1c2533",
-                hover_color=bg,
-                border_width=2,
-                border_color=fg if value == "medium" else "#2a3a4a",
-                command=lambda v=value: self._set_quality(v),
-            )
-            btn.grid(row=1, column=col, padx=6, pady=(0, 10), sticky="ew")
-            self._q_buttons[value] = btn
-        self._set_quality("medium")
+        self._quality_var = tk.IntVar(value=65)
+        
+        q_slider_frame = ctk.CTkFrame(cfg, fg_color="transparent")
+        q_slider_frame.grid(row=1, column=0, columnspan=4, sticky="ew", padx=12, pady=(0, 10))
+        q_slider_frame.columnconfigure(0, weight=1)
+
+        self._quality_slider = ctk.CTkSlider(
+            q_slider_frame, from_=0, to=100, number_of_steps=100,
+            variable=self._quality_var, command=self._on_quality_slider_change
+        )
+        self._quality_slider.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+
+        self._quality_entry = ctk.CTkEntry(
+            q_slider_frame, width=50, font=("Segoe UI", 12),
+            textvariable=self._quality_var
+        )
+        self._quality_entry.grid(row=0, column=1)
 
         # ---- Encoding speed ----
         s_lbl = ctk.CTkLabel(
-            cfg, text="⚡  Velocidad de codificación",
+            cfg, text="⚡  Esfuerzo de compresión",
             font=("Segoe UI Semibold", 12), anchor="w"
         )
         s_lbl.grid(row=2, column=0, columnspan=2, sticky="w", padx=12, pady=(4, 4))
 
-        self._speed_var = tk.StringVar(value="good")
-        speed_menu = ctk.CTkOptionMenu(
+        self._speed_map = {
+            "Photoshop / Máxima Compresión (Muy Lento)": 2,
+            "Equilibrado (Lento)": 5,
+            "Ultra Rápido (Menor compresión)": 8
+        }
+        self._speed_menu = ctk.CTkOptionMenu(
             cfg,
-            values=["fast  (rápido)", "good  (bueno)", "best  (mejor)"],
-            variable=None,
-            command=self._on_speed_change,
+            values=list(self._speed_map.keys()),
             font=("Segoe UI", 12),
             dropdown_font=("Segoe UI", 12),
-            width=200,
+            width=260,
         )
-        speed_menu.set("good  (bueno)")
-        speed_menu.grid(row=2, column=2, columnspan=2, padx=6, pady=(4, 10), sticky="ew")
-        self._speed_menu = speed_menu
+        self._speed_menu.set("Photoshop / Máxima Compresión (Muy Lento)")
+        self._speed_menu.grid(row=2, column=2, columnspan=2, padx=6, pady=(4, 10), sticky="ew")
 
-        # ---- Options row ----
+        # ---- Subsampling ----
+        sub_lbl = ctk.CTkLabel(
+            cfg, text="🎨  Submuestreo de color (Chroma)",
+            font=("Segoe UI Semibold", 12), anchor="w"
+        )
+        sub_lbl.grid(row=3, column=0, columnspan=2, sticky="w", padx=12, pady=(4, 4))
+
+        self._subsampling_menu = ctk.CTkOptionMenu(
+            cfg,
+            values=["4:2:0 (Óptimo para Web - Recomendado)", "4:4:4 (Máxima calidad de color)"],
+            font=("Segoe UI", 12),
+            dropdown_font=("Segoe UI", 12),
+            width=260,
+        )
+        self._subsampling_menu.set("4:2:0 (Óptimo para Web - Recomendado)")
+        self._subsampling_menu.grid(row=3, column=2, columnspan=2, padx=6, pady=(4, 10), sticky="ew")
+
+        # ---- Resizing Frame ----
+        resize_frame = ctk.CTkFrame(cfg, fg_color="#1a2533", corner_radius=6)
+        resize_frame.grid(row=4, column=0, columnspan=4, sticky="ew", padx=12, pady=10)
+        
+        self._resize_var = tk.BooleanVar(value=False)
+        self._resize_cb = ctk.CTkCheckBox(
+            resize_frame, text="Redimensionar imagen (LANCZOS)",
+            variable=self._resize_var, font=("Segoe UI Semibold", 12),
+            checkbox_width=18, checkbox_height=18,
+            command=self._on_resize_toggle
+        )
+        self._resize_cb.grid(row=0, column=0, padx=10, pady=8, sticky="w")
+
+        inputs_frame = ctk.CTkFrame(resize_frame, fg_color="transparent")
+        inputs_frame.grid(row=0, column=1, padx=10, pady=8, sticky="e")
+        
+        ctk.CTkLabel(inputs_frame, text="W:", font=("Segoe UI", 11)).pack(side="left", padx=2)
+        self._resize_w = ctk.CTkEntry(inputs_frame, width=60, font=("Segoe UI", 11), placeholder_text="Px")
+        self._resize_w.pack(side="left", padx=2)
+        
+        ctk.CTkLabel(inputs_frame, text="H:", font=("Segoe UI", 11)).pack(side="left", padx=2)
+        self._resize_h = ctk.CTkEntry(inputs_frame, width=60, font=("Segoe UI", 11), placeholder_text="Px")
+        self._resize_h.pack(side="left", padx=2)
+        
+        self._on_resize_toggle() # Initialize state
+
+        # ---- Footer Options ----
         opts = ctk.CTkFrame(cfg, fg_color="transparent")
-        opts.grid(row=3, column=0, columnspan=4, sticky="ew", padx=12, pady=(0, 4))
+        opts.grid(row=5, column=0, columnspan=4, sticky="ew", padx=12, pady=(0, 10))
 
         # EXIF checkbox
         self._keep_exif_var = tk.BooleanVar(value=True)
@@ -230,7 +270,7 @@ class MainWindow(ctk.CTk):
 
         ctk.CTkLabel(
             dest_frame,
-            text="📁  Carpeta destino:",
+            text="📁  Destino:",
             font=("Segoe UI", 12),
         ).pack(side="left", padx=(0, 6))
 
@@ -239,7 +279,7 @@ class MainWindow(ctk.CTk):
             dest_frame,
             textvariable=self._dest_var,
             placeholder_text="(misma carpeta origen)",
-            width=200,
+            width=160,
             font=("Segoe UI", 11),
         )
         dest_entry.pack(side="left", padx=(0, 4))
@@ -255,9 +295,6 @@ class MainWindow(ctk.CTk):
             command=self._browse_dest,
         )
         browse_dest.pack(side="left")
-
-        # Padding bottom
-        ctk.CTkLabel(cfg, text="").grid(row=4, column=0, pady=2)
 
     # ------------------------------------------------------------------
     # Progress + status bar
@@ -296,24 +333,14 @@ class MainWindow(ctk.CTk):
     # ==================================================================
     # Event handlers
     # ==================================================================
-    def _set_quality(self, value: str):
-        self._quality_var.set(value)
-        colors = {
-            "high":   ("#14532d", "#22c55e"),
-            "medium": ("#1e3a5f", "#6aadff"),
-            "low":    ("#4a1a00", "#f97316"),
-        }
-        for k, btn in self._q_buttons.items():
-            is_sel = k == value
-            bg, fg = colors[k]
-            btn.configure(
-                fg_color=bg if is_sel else "#1c2533",
-                border_color=fg if is_sel else "#2a3a4a",
-            )
+    def _on_quality_slider_change(self, value):
+        # slider value is float, entry uses IntVar
+        pass
 
-    def _on_speed_change(self, choice: str):
-        # extract first word
-        self._speed_var.set(choice.split()[0])
+    def _on_resize_toggle(self):
+        state = "normal" if self._resize_var.get() else "disabled"
+        self._resize_w.configure(state=state)
+        self._resize_h.configure(state=state)
 
     def _browse_dest(self):
         folder = filedialog.askdirectory(title="Seleccionar carpeta destino")
@@ -354,6 +381,36 @@ class MainWindow(ctk.CTk):
             )
             return
 
+        # Collect parameters
+        try:
+            quality = int(self._quality_var.get())
+        except ValueError:
+            quality = 65
+
+        speed_label = self._speed_menu.get()
+        speed = self._speed_map.get(speed_label, 5)
+
+        subsampling_label = self._subsampling_menu.get()
+        subsampling = "4:2:0" if "4:2:0" in subsampling_label else "4:4:4"
+
+        resize_enabled = self._resize_var.get()
+        resize_w = 0
+        resize_h = 0
+        if resize_enabled:
+            try:
+                w_str = self._resize_w.get().strip()
+                h_str = self._resize_h.get().strip()
+                resize_w = int(w_str) if w_str else 0
+                resize_h = int(h_str) if h_str else 0
+            except ValueError:
+                pass
+        
+        resize_cfg = {
+            "enabled": resize_enabled,
+            "width": resize_w,
+            "height": resize_h
+        }
+
         output_dir = self._dest_var.get().strip() or None
         check_dir  = output_dir or os.path.dirname(self._files[0])
 
@@ -378,31 +435,31 @@ class MainWindow(ctk.CTk):
         self._progress_bar.set(0)
         self._stop_event.clear()
 
-        quality_preset = self._quality_var.get()
-        keep_exif      = self._keep_exif_var.get()
-        speed          = self._speed_var.get().split()[0]  # "fast", "good", "best"
+        keep_exif = self._keep_exif_var.get()
 
         thread = threading.Thread(
             target=self._run_batch,
-            args=(self._files.copy(), output_dir, quality_preset, keep_exif, speed),
+            args=(self._files.copy(), output_dir, quality, keep_exif, speed, subsampling, resize_cfg),
             daemon=True,
         )
         thread.start()
 
-    def _run_batch(self, files, output_dir, quality_preset, keep_exif, speed):
+    def _run_batch(self, files, output_dir, quality, keep_exif, speed, subsampling, resize_cfg):
 
         def progress_cb(idx, total, result):
             self._queue.put(("progress", idx, total, result))
 
         try:
             self._converter.convert_batch(
-                input_paths    = files,
-                output_dir     = output_dir,
-                quality_preset = quality_preset,
-                keep_exif      = keep_exif,
-                encoding_speed = speed,
-                progress_cb    = progress_cb,
-                stop_event     = self._stop_event,
+                input_paths  = files,
+                output_dir   = output_dir,
+                quality      = quality,
+                keep_exif    = keep_exif,
+                speed        = speed,
+                subsampling  = subsampling,
+                resize_cfg   = resize_cfg,
+                progress_cb  = progress_cb,
+                stop_event   = self._stop_event,
             )
         except Exception as exc:
             self._queue.put(("error", str(exc)))

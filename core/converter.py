@@ -83,9 +83,11 @@ class Converter:
         self,
         input_path: str,
         output_dir: str | None = None,
-        quality_preset: str = "medium",
+        quality: int = 65,
         keep_exif: bool = True,
-        encoding_speed: str = "good",
+        speed: int = 5,
+        subsampling: str = "4:2:0",
+        resize_cfg: dict | None = None,
     ) -> ConversionResult:
         """
         Convert a single image to AVIF.
@@ -96,23 +98,40 @@ class Converter:
             Absolute path to the source PNG/JPG.
         output_dir : str | None
             Destination directory. None → same directory as source.
-        quality_preset : str
-            One of "high", "medium", "low".
+        quality : int
+            Compression quality (0-100).
         keep_exif : bool
             If True, copy EXIF from source to output (if available).
-        encoding_speed : str
-            One of "fast", "good", "best". Overrides the preset speed.
+        speed : int
+            Encoding effort (0-9). 0-3 is slowest/best, 8-9 is fastest.
+        subsampling : str
+            Chroma subsampling ("4:2:0" or "4:4:4").
+        resize_cfg : dict | None
+            {"enabled": bool, "width": int, "height": int}.
         """
-        preset = PRESETS.get(quality_preset, PRESETS["medium"])
-        quality = preset["quality"]
-        speed = SPEED_LABELS.get(encoding_speed, preset["speed"])
-
         output_path = build_output_path(input_path, output_dir)
         original_size = get_file_size(input_path)
 
         try:
             with Image.open(input_path) as img:
-                # Normalise mode: AVIF supports RGB and RGBA
+                # 1. Handle resizing if enabled
+                if resize_cfg and resize_cfg.get("enabled"):
+                    w, h = img.size
+                    target_w = resize_cfg.get("width")
+                    target_h = resize_cfg.get("height")
+
+                    if target_w and target_w > 0:
+                        # Proportional if only width or both provided
+                        if not target_h or target_h <= 0:
+                            target_h = int(h * (target_w / w))
+                        
+                        img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+                    elif target_h and target_h > 0:
+                        # Proportional if only height provided
+                        target_w = int(w * (target_h / h))
+                        img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+                # 2. Normalise mode: AVIF supports RGB and RGBA
                 if img.mode not in ("RGB", "RGBA"):
                     img = img.convert("RGBA" if "A" in img.mode else "RGB")
 
@@ -120,6 +139,7 @@ class Converter:
                     "format": "AVIF",
                     "quality": quality,
                     "speed": speed,
+                    "subsampling": subsampling,
                 }
 
                 if keep_exif:
@@ -131,17 +151,13 @@ class Converter:
                 pathlib.Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
                 # Write to a temp file first, then atomically replace.
-                # This avoids Windows file-lock issues when overwriting an
-                # existing .avif (e.g. on a repeated conversion of the same batch).
                 dest_dir = str(pathlib.Path(output_path).parent)
                 fd, tmp_path = tempfile.mkstemp(suffix=".avif.tmp", dir=dest_dir)
                 try:
-                    os.close(fd)  # Pillow opens by path, not fd
+                    os.close(fd)
                     img.save(tmp_path, **save_kwargs)
-                    # Replace destination atomically (works even if dest exists)
                     shutil.move(tmp_path, output_path)
                 except Exception:
-                    # Clean up temp file on failure
                     try:
                         os.unlink(tmp_path)
                     except OSError:
@@ -158,6 +174,8 @@ class Converter:
             )
 
         except Exception as exc:
+            import traceback
+            traceback.print_exc()
             return ConversionResult(
                 source_path=input_path,
                 output_path=output_path,
@@ -168,36 +186,78 @@ class Converter:
             )
 
     # ------------------------------------------------------------------
-    # Batch (threaded, calls progress_cb after each file)
+    # Batch (parallel using ProcessPoolExecutor)
     # ------------------------------------------------------------------
     def convert_batch(
         self,
         input_paths: list[str],
         output_dir: str | None = None,
-        quality_preset: str = "medium",
+        quality: int = 65,
         keep_exif: bool = True,
-        encoding_speed: str = "good",
+        speed: int = 5,
+        subsampling: str = "4:2:0",
+        resize_cfg: dict | None = None,
         progress_cb: Callable[[int, int, ConversionResult], None] | None = None,
         stop_event: threading.Event | None = None,
     ) -> list[ConversionResult]:
         """
-        Convert multiple images, optionally reporting progress.
-
-        *progress_cb* receives (current_index, total, result) after each file.
-        *stop_event* can be set externally to cancel mid-batch.
+        Convert multiple images in parallel.
         """
+        import concurrent.futures
+
         results: list[ConversionResult] = []
         total = len(input_paths)
-        for idx, path in enumerate(input_paths, start=1):
-            if stop_event and stop_event.is_set():
-                print(f"[converter] stop_event set, aborting at [{idx}/{total}]")
-                break
-            print(f"[converter] starting [{idx}/{total}]: {path}")
-            result = self.convert_one(
-                path, output_dir, quality_preset, keep_exif, encoding_speed
-            )
-            print(f"[converter] finished [{idx}/{total}]: success={result.success} error={result.error!r}")
-            results.append(result)
-            if progress_cb:
-                progress_cb(idx, total, result)
+        
+        # We use max_workers=16 as requested for high-end multicore systems.
+        # This leverages ProcessPoolExecutor for CPU-bound image encoding.
+        with concurrent.futures.ProcessPoolExecutor(max_workers=16) as executor:
+            # Prepare tasks
+            futures = {}
+            for path in input_paths:
+                # Although we can't easily cancellation mid-process, 
+                # we can check the event before submission.
+                if stop_event and stop_event.is_set():
+                    break
+                
+                future = executor.submit(
+                    _run_convert_one_wrapper,
+                    self,
+                    path,
+                    output_dir,
+                    quality,
+                    keep_exif,
+                    speed,
+                    subsampling,
+                    resize_cfg
+                )
+                futures[future] = path
+
+            # Collect results as they finish
+            for idx, future in enumerate(concurrent.futures.as_completed(futures), start=1):
+                if stop_event and stop_event.is_set():
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    break
+                
+                try:
+                    result = future.result()
+                    results.append(result)
+                    if progress_cb:
+                        progress_cb(idx, total, result)
+                except Exception as exc:
+                    # This shouldn't normally happen as convert_one catches its own exceptions
+                    # but good for safety.
+                    path = futures[future]
+                    res = ConversionResult(path, "", 0, 0, False, error=str(exc))
+                    results.append(res)
+                    if progress_cb:
+                        progress_cb(idx, total, res)
+
         return results
+
+
+def _run_convert_one_wrapper(converter, *args, **kwargs):
+    """
+    Helper function to call convert_one inside a separate process.
+    ProcessPoolExecutor requires the target to be a top-level function.
+    """
+    return converter.convert_one(*args, **kwargs)
