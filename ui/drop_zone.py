@@ -1,8 +1,12 @@
 """
 drop_zone.py — Drag-and-drop file selection panel.
+
+Uses the centralized utils/dnd_bootstrap.py for DnD registration and
+utils/dnd_utils.py for cross-platform path parsing.
 """
 from __future__ import annotations
 
+import logging
 import os
 import tkinter as tk
 from tkinter import filedialog
@@ -11,13 +15,11 @@ from typing import Callable
 import customtkinter as ctk
 
 from utils.file_utils import is_valid_image, format_bytes, get_file_size
+from utils.i18n import I18N
+from utils.dnd_bootstrap import is_ready as dnd_is_ready, enable_dnd_on_widget
+from utils.dnd_utils import parse_drop_paths
 
-# Try to import tkinterdnd2 for native drag-and-drop
-try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
-    DND_AVAILABLE = True
-except ImportError:
-    DND_AVAILABLE = False
+logger = logging.getLogger(__name__)
 
 
 class FileRow(ctk.CTkFrame):
@@ -100,7 +102,9 @@ class DropZone(ctk.CTkFrame):
         self._files: list[str] = []
 
         self._build_ui()
-        self._enable_dnd()
+        # Schedule DnD registration for next idle loop so the widget tree
+        # is fully constructed first (fixes the "not permitted" cursor).
+        self.after_idle(self._enable_dnd)
 
     # ------------------------------------------------------------------
     # Build
@@ -123,7 +127,7 @@ class DropZone(ctk.CTkFrame):
 
         dnd_icon = ctk.CTkLabel(
             header,
-            text="⬇  Arrastra imágenes aquí",
+            textvariable=I18N.tvar(header, "drop_title"),
             font=("Segoe UI Semibold", 14),
             text_color="#6aadff",
         )
@@ -131,7 +135,7 @@ class DropZone(ctk.CTkFrame):
 
         sub = ctk.CTkLabel(
             header,
-            text="PNG, JPG/JPEG soportados",
+            textvariable=I18N.tvar(header, "drop_sub"),
             font=("Segoe UI", 11),
             text_color="gray",
         )
@@ -142,7 +146,7 @@ class DropZone(ctk.CTkFrame):
 
         browse_btn = ctk.CTkButton(
             btn_row,
-            text="📂  Examinar archivos",
+            textvariable=I18N.tvar(btn_row, "btn_browse"),
             width=160,
             height=34,
             font=("Segoe UI Semibold", 12),
@@ -154,7 +158,7 @@ class DropZone(ctk.CTkFrame):
 
         clear_btn = ctk.CTkButton(
             btn_row,
-            text="🗑  Limpiar lista",
+            textvariable=I18N.tvar(btn_row, "btn_clear"),
             width=130,
             height=34,
             font=("Segoe UI", 12),
@@ -186,23 +190,23 @@ class DropZone(ctk.CTkFrame):
         )
         self.rowconfigure(2, weight=1)
 
+    # ------------------------------------------------------------------
+    # Drag-and-Drop registration (via centralized bootstrap)
+    # ------------------------------------------------------------------
     def _enable_dnd(self):
-        """
-        Register native DnD on this frame and the scrollable list area.
-        Now that app.py patches ctk.CTk.__bases__ = (TkinterDnD.Tk,),
-        the root window IS a TkinterDnD.Tk, so drop_target_register works
-        on any child widget.
-        """
-        if not DND_AVAILABLE:
+        """Register this widget tree as a drop target using the bootstrap helper."""
+        if not dnd_is_ready():
+            logger.info("DnD not available — Browse button is the only input method.")
             return
-        try:
-            for widget in (self, self._list_frame):
-                widget.drop_target_register(DND_FILES)
-                widget.dnd_bind("<<Drop>>", self._on_drop)
-                widget.dnd_bind("<<DragEnter>>", self._on_drag_enter)
-                widget.dnd_bind("<<DragLeave>>", self._on_drag_leave)
-        except Exception:
-            pass
+
+        enable_dnd_on_widget(
+            self,
+            on_drop=self._on_drop,
+            on_enter=self._on_drag_enter,
+            on_leave=self._on_drag_leave,
+            recursive=True,
+        )
+        logger.info("DropZone: DnD targets registered on widget tree.")
 
     def _on_drag_enter(self, event):
         """Visual feedback: highlight border when dragging over."""
@@ -217,7 +221,6 @@ class DropZone(ctk.CTkFrame):
             self._header_frame.configure(border_color="#2d4a7a")
         except Exception:
             pass
-
 
     # ------------------------------------------------------------------
     # Handlers
@@ -235,15 +238,21 @@ class DropZone(ctk.CTkFrame):
             self.add_files(list(paths))
 
     def _on_drop(self, event):
-        """Parse tkinterdnd2 drop data."""
-        raw = event.data
-        # tkdnd wraps paths with spaces in curly braces
-        paths: list[str] = []
-        import re
-        for token in re.findall(r'\{[^}]+\}|\S+', raw):
-            p = token.strip("{}")
-            paths.append(p)
-        self.add_files(paths)
+        """
+        Parse tkinterdnd2 drop data using the cross-platform normalizer.
+        parse_drop_paths already validates existence & extension.
+        """
+        paths = parse_drop_paths(event.data)
+        if paths:
+            self.add_files(paths)
+        else:
+            logger.info("DnD: no valid image files in dropped data.")
+
+        # Restore border in case <<DragLeave>> did not fire
+        try:
+            self._header_frame.configure(border_color="#2d4a7a")
+        except Exception:
+            pass
 
     def _remove_file(self, path: str):
         if path in self._files:

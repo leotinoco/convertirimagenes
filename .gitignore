@@ -1,20 +1,55 @@
+# --- Python ---
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
 env/
-dist/
 build/
-.venv/
-venv/
-.pytest_cache/
-.coverage
-htmlcov/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# --- Virtual Environments ---
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# --- Testing ---
+.pytest_cache/
+.coverage
+htmlcov/
+.noserc
+nosetests.xml
+coverage.xml
+
+# --- IDEs / Editors ---
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+
+# --- OS Specific ---
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Project Specific ---
+*.avif
+_test*
+*.log
+*.spec

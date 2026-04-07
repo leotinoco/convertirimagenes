@@ -85,6 +85,8 @@ class Converter:
         output_dir: str | None = None,
         quality: int = 65,
         keep_exif: bool = True,
+        keep_iptc: bool = False,
+        custom_meta: dict | None = None,
         speed: int = 5,
         subsampling: str = "4:2:0",
         resize_cfg: dict | None = None,
@@ -102,6 +104,10 @@ class Converter:
             Compression quality (0-100).
         keep_exif : bool
             If True, copy EXIF from source to output (if available).
+        keep_iptc : bool
+            If True, copy IPTC from source to output (if available).
+        custom_meta: dict | None
+            Custom metadata to inject into EXIF fields.
         speed : int
             Encoding effort (0-9). 0-3 is slowest/best, 8-9 is fastest.
         subsampling : str
@@ -142,8 +148,13 @@ class Converter:
                     "subsampling": subsampling,
                 }
 
-                if keep_exif:
-                    exif_bytes = load_exif(input_path)
+                if keep_iptc:
+                    iptc_bytes = img.info.get("iptc")
+                    if iptc_bytes:
+                        save_kwargs["iptc"] = iptc_bytes
+
+                if keep_exif or custom_meta:
+                    exif_bytes = load_exif(input_path, custom_meta)
                     if exif_bytes:
                         save_kwargs["exif"] = exif_bytes
 
@@ -194,9 +205,12 @@ class Converter:
         output_dir: str | None = None,
         quality: int = 65,
         keep_exif: bool = True,
+        keep_iptc: bool = False,
+        custom_meta: dict | None = None,
         speed: int = 5,
         subsampling: str = "4:2:0",
         resize_cfg: dict | None = None,
+        max_workers: int | None = None,
         progress_cb: Callable[[int, int, ConversionResult], None] | None = None,
         stop_event: threading.Event | None = None,
     ) -> list[ConversionResult]:
@@ -204,28 +218,32 @@ class Converter:
         Convert multiple images in parallel.
         """
         import concurrent.futures
+        import os
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         results: list[ConversionResult] = []
         total = len(input_paths)
         
-        # We use max_workers=16 as requested for high-end multicore systems.
-        # This leverages ProcessPoolExecutor for CPU-bound image encoding.
-        with concurrent.futures.ProcessPoolExecutor(max_workers=16) as executor:
+        workers = max_workers if max_workers is not None else (os.cpu_count() or 4)
+        logger.info("Starting batch conversion: %d files, %d workers", total, workers)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             # Prepare tasks
             futures = {}
             for path in input_paths:
-                # Although we can't easily cancellation mid-process, 
-                # we can check the event before submission.
                 if stop_event and stop_event.is_set():
                     break
                 
                 future = executor.submit(
-                    _run_convert_one_wrapper,
-                    self,
+                    self.convert_one,
                     path,
                     output_dir,
                     quality,
                     keep_exif,
+                    keep_iptc,
+                    custom_meta,
                     speed,
                     subsampling,
                     resize_cfg
@@ -241,12 +259,12 @@ class Converter:
                 try:
                     result = future.result()
                     results.append(result)
+                    logger.info("Converted %d/%d: %s → %s", idx, total, result.source_path, "OK" if result.success else result.error)
                     if progress_cb:
                         progress_cb(idx, total, result)
                 except Exception as exc:
-                    # This shouldn't normally happen as convert_one catches its own exceptions
-                    # but good for safety.
                     path = futures[future]
+                    logger.error("Conversion failed for %s: %s", path, exc)
                     res = ConversionResult(path, "", 0, 0, False, error=str(exc))
                     results.append(res)
                     if progress_cb:
