@@ -1,5 +1,7 @@
 # ⚡ ConvertirImagenes — Advanced Multiplatform AVIF Converter
 
+![Vista Previa de la Aplicación](img/app-optimizar-imagenes-desarrollo-web.avif)
+
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
