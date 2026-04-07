@@ -50,6 +50,7 @@ Desktop.ini
 
 # --- Project Specific ---
 *.avif
+!img/*.avif
 _test*
 *.log
 *.spec
