@@ -22,6 +22,7 @@ Aplicación de escritorio profesional para la conversión masiva de imágenes a 
 | **Edición de Metadata** | Formulario integrado para modificar Autor, Título, Copyright y más. |
 | **Redimensionado** | Redimensionado automático con preservación de relación de aspecto. |
 | **Vista Previa** | Comparativa visual Antes/Después con tamaños y % de ahorro. |
+| **Transparencia** | Preservación automática de canal alpha (RGBA) forzando subsampling 4:4:4. |
 | **Multilingüe** | Soporte completo para Español e Inglés (conmutación en caliente). |
 | **Seguridad** | Auditoría DevSecOps: logs sanitizados, soporte para `.env` y rutas relativas. |
 

@@ -138,14 +138,25 @@ class Converter:
                         img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
                 # 2. Normalise mode: AVIF supports RGB and RGBA
+                #    Also handle palette images ("P") that may have transparency.
+                has_alpha = (
+                    img.mode in ("RGBA", "LA", "PA")
+                    or (img.mode == "P" and "transparency" in img.info)
+                )
                 if img.mode not in ("RGB", "RGBA"):
-                    img = img.convert("RGBA" if "A" in img.mode else "RGB")
+                    img = img.convert("RGBA" if has_alpha else "RGB")
+                    has_alpha = img.mode == "RGBA"  # re-check after conversion
+
+                # Force 4:4:4 chroma subsampling for RGBA images.
+                # 4:2:0 does not carry alpha information correctly in some
+                # libavif builds and will silently drop the transparency.
+                effective_subsampling = "4:4:4" if has_alpha else subsampling
 
                 save_kwargs: dict = {
                     "format": "AVIF",
                     "quality": quality,
                     "speed": speed,
-                    "subsampling": subsampling,
+                    "subsampling": effective_subsampling,
                 }
 
                 if keep_iptc:
