@@ -181,57 +181,59 @@ class MainWindow(ctk.CTk):
         ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "settings_opt"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 5))
         
         q_frame = ctk.CTkFrame(opt_frame, fg_color="transparent")
-        q_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=5)
+        q_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 2))
         q_frame.columnconfigure(1, weight=1)
         
         ctk.CTkLabel(q_frame, textvariable=I18N.tvar(q_frame, "q_lbl"), font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
         self._quality_var = tk.IntVar(value=65)
         ctk.CTkLabel(q_frame, textvariable=self._quality_var, font=("Segoe UI", 12)).grid(row=0, column=2, sticky="e")
-        ctk.CTkSlider(q_frame, from_=0, to=100, variable=self._quality_var, command=lambda v: self._quality_var.set(int(v))).grid(row=1, column=0, columnspan=3, sticky="ew", pady=(5,0))
+        ctk.CTkSlider(q_frame, from_=0, to=100, variable=self._quality_var, command=lambda v: self._quality_var.set(int(v))).grid(row=1, column=0, columnspan=3, sticky="ew", pady=(2,0))
 
-        ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "speed_lbl"), font=("Segoe UI", 12)).grid(row=2, column=0, sticky="w", padx=12, pady=(10, 0))
+        ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "speed_lbl"), font=("Segoe UI", 12)).grid(row=2, column=0, sticky="w", padx=12, pady=(5, 0))
         self._speed_map = {I18N.get("speed_slow"): 2, I18N.get("speed_med"): 5, I18N.get("speed_fast"): 8}
         self._speed_menu = ctk.CTkOptionMenu(opt_frame, values=list(self._speed_map.keys()), font=("Segoe UI", 12))
-        self._speed_menu.grid(row=3, column=0, sticky="ew", padx=12, pady=(2, 10))
+        self._speed_menu.grid(row=3, column=0, sticky="ew", padx=12, pady=(2, 2))
         
         ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "sub_lbl"), font=("Segoe UI", 12)).grid(row=4, column=0, sticky="w", padx=12, pady=(5, 0))
         self._subsampling_menu = ctk.CTkOptionMenu(opt_frame, values=[I18N.get("sub_420"), I18N.get("sub_444")], font=("Segoe UI", 12))
-        self._subsampling_menu.grid(row=5, column=0, sticky="ew", padx=12, pady=(2, 10))
+        self._subsampling_menu.grid(row=5, column=0, sticky="ew", padx=12, pady=(2, 0))
+
+        ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "sub_warn"), font=("Segoe UI", 10), text_color="#a0b0c0").grid(row=6, column=0, sticky="w", padx=12, pady=(2, 5))
 
         # Threads slider (CPU count)
         t_frame = ctk.CTkFrame(opt_frame, fg_color="transparent")
-        t_frame.grid(row=6, column=0, sticky="ew", padx=12, pady=(0, 10))
+        t_frame.grid(row=7, column=0, sticky="ew", padx=12, pady=(0, 10))
         t_frame.columnconfigure(1, weight=1)
         import os
         max_threads = os.cpu_count() or 4
         ctk.CTkLabel(t_frame, textvariable=I18N.tvar(t_frame, "threads_lbl"), font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
         self._threads_var = tk.IntVar(value=max_threads)
         ctk.CTkLabel(t_frame, textvariable=self._threads_var, font=("Segoe UI", 12)).grid(row=0, column=2, sticky="e")
-        ctk.CTkSlider(t_frame, from_=1, to=max_threads, number_of_steps=max_threads-1, variable=self._threads_var, command=lambda v: self._threads_var.set(int(v))).grid(row=1, column=0, columnspan=3, sticky="ew", pady=(5,0))
+        ctk.CTkSlider(t_frame, from_=1, to=max_threads, number_of_steps=max_threads-1, variable=self._threads_var, command=lambda v: self._threads_var.set(int(v))).grid(row=1, column=0, columnspan=3, sticky="ew", pady=(2,0))
 
         # 2. Resizing Options
         res_frame = ctk.CTkFrame(mid, fg_color="#111820", corner_radius=8)
         res_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 15))
         res_frame.columnconfigure(1, weight=1)
         
-        ctk.CTkLabel(res_frame, textvariable=I18N.tvar(res_frame, "resize_hdr"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 10))
+        ctk.CTkLabel(res_frame, textvariable=I18N.tvar(res_frame, "resize_hdr"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 5))
 
         self._resize_var = tk.BooleanVar(value=False)
-        ctk.CTkLabel(res_frame, textvariable=I18N.tvar(res_frame, "resize_en"), font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=12, pady=5)
+        ctk.CTkLabel(res_frame, textvariable=I18N.tvar(res_frame, "resize_en"), font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=12, pady=(0, 2))
         self._resize_sw = ctk.CTkSwitch(res_frame, text="", variable=self._resize_var, command=self._on_resize_toggle)
-        self._resize_sw.grid(row=1, column=1, sticky="e", padx=12)
+        self._resize_sw.grid(row=1, column=1, sticky="e", padx=12, pady=(0, 2))
 
         wh_frame = ctk.CTkFrame(res_frame, fg_color="transparent")
-        wh_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=12, pady=10)
+        wh_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
         wh_frame.columnconfigure((0,1), weight=1)
         
         ctk.CTkLabel(wh_frame, textvariable=I18N.tvar(wh_frame, "width"), font=("Segoe UI", 11)).grid(row=0, column=0, sticky="w")
-        self._resize_w = ctk.CTkEntry(wh_frame, placeholder_text="1920", height=32)
+        self._resize_w = ctk.CTkEntry(wh_frame, placeholder_text="1920", height=28)
         self._resize_w.grid(row=1, column=0, sticky="ew", padx=(0, 5))
         self._resize_w.bind("<KeyRelease>", self._on_width_changed)
         
         ctk.CTkLabel(wh_frame, textvariable=I18N.tvar(wh_frame, "height"), font=("Segoe UI", 11)).grid(row=0, column=1, sticky="w")
-        self._resize_h = ctk.CTkEntry(wh_frame, placeholder_text="1080", height=32)
+        self._resize_h = ctk.CTkEntry(wh_frame, placeholder_text="1080", height=28)
         self._resize_h.grid(row=1, column=1, sticky="ew", padx=(5, 0))
         self._resize_h.bind("<KeyRelease>", self._on_height_changed)
 
@@ -240,15 +242,15 @@ class MainWindow(ctk.CTk):
         meta_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
         meta_frame.columnconfigure(1, weight=1)
         
-        ctk.CTkLabel(meta_frame, textvariable=I18N.tvar(meta_frame, "meta_hdr"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 10))
+        ctk.CTkLabel(meta_frame, textvariable=I18N.tvar(meta_frame, "meta_hdr"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 5))
         
-        ctk.CTkLabel(meta_frame, textvariable=I18N.tvar(meta_frame, "meta_exif"), font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=12, pady=5)
+        ctk.CTkLabel(meta_frame, textvariable=I18N.tvar(meta_frame, "meta_exif"), font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=12, pady=(0, 2))
         self._keep_exif_var = tk.BooleanVar(value=True)
-        ctk.CTkSwitch(meta_frame, text="", variable=self._keep_exif_var).grid(row=1, column=1, sticky="e", padx=12)
+        ctk.CTkSwitch(meta_frame, text="", variable=self._keep_exif_var).grid(row=1, column=1, sticky="e", padx=12, pady=(0, 2))
 
-        ctk.CTkLabel(meta_frame, textvariable=I18N.tvar(meta_frame, "meta_iptc"), font=("Segoe UI", 12)).grid(row=2, column=0, sticky="w", padx=12, pady=5)
+        ctk.CTkLabel(meta_frame, textvariable=I18N.tvar(meta_frame, "meta_iptc"), font=("Segoe UI", 12)).grid(row=2, column=0, sticky="w", padx=12, pady=(0, 2))
         self._keep_iptc_var = tk.BooleanVar(value=True)
-        ctk.CTkSwitch(meta_frame, text="", variable=self._keep_iptc_var).grid(row=2, column=1, sticky="e", padx=12)
+        ctk.CTkSwitch(meta_frame, text="", variable=self._keep_iptc_var).grid(row=2, column=1, sticky="e", padx=12, pady=(0, 2))
 
         meta_btn = ctk.CTkButton(
             meta_frame, 
@@ -257,9 +259,10 @@ class MainWindow(ctk.CTk):
             border_width=1, 
             border_color="#2d4a7a",
             hover_color="#1a2b4a",
-            command=self._open_metadata_editor
+            command=self._open_metadata_editor,
+            height=28
         )
-        meta_btn.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=12)
+        meta_btn.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(5, 10))
 
         self._on_resize_toggle()
 

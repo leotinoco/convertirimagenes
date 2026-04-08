@@ -47,3 +47,24 @@ def get_file_size(path: str) -> int:
         return os.path.getsize(path)
     except OSError:
         return 0
+
+
+def show_in_file_explorer(path: str) -> None:
+    """Open the system file explorer and select the given file."""
+    if not path or not os.path.exists(path):
+        return
+
+    import subprocess
+    import sys
+
+    try:
+        if sys.platform == "win32":
+            subprocess.Popen(f'explorer /select,"{os.path.normpath(path)}"')
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", path])
+        else:
+            # Linux and others
+            subprocess.Popen(["xdg-open", os.path.dirname(path)])
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to open file explorer: {exc}")

@@ -55,6 +55,7 @@ class ConversionResult:
     converted_size: int
     success: bool
     error: str = ""
+    subsampling: str = ""
     savings_pct: float = field(init=False)
 
     def __post_init__(self):
@@ -193,6 +194,7 @@ class Converter:
                 original_size=original_size,
                 converted_size=converted_size,
                 success=True,
+                subsampling=effective_subsampling,
             )
 
         except Exception as exc:
