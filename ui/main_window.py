@@ -54,6 +54,7 @@ class MainWindow(ctk.CTk):
         self._stop_event = threading.Event()
         self._queue: queue.Queue = queue.Queue()
         self._converter: Converter | None = None
+        self._successful_original_files: set[str] = set()
 
         # Try to initialise converter (may fail if plugin missing)
         try:
@@ -161,6 +162,18 @@ class MainWindow(ctk.CTk):
             command=self._start_conversion,
         )
         self._convert_btn.grid(row=2, column=0, sticky="ew", padx=12, pady=12)
+
+        self._delete_orig_btn = ctk.CTkButton(
+            left,
+            textvariable=I18N.tvar(left, "btn_delete_originals"),
+            font=("Segoe UI Semibold", 16),
+            height=46,
+            fg_color="#e63946",
+            hover_color="#d62828",
+            state="disabled",
+            command=self._delete_originals,
+        )
+        self._delete_orig_btn.grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 12))
 
     # ------------------------------------------------------------------
     # Middle panel (Settings)
@@ -347,6 +360,9 @@ class MainWindow(ctk.CTk):
         self._convert_btn.configure(textvariable="")
         self._convert_btn.configure(text=btn_txt)
 
+        self._successful_original_files.clear()
+        self._delete_orig_btn.configure(state="disabled")
+
         if files:
             self._preview.set_before(files[0])
             self._preview.set_after(None)
@@ -383,7 +399,9 @@ class MainWindow(ctk.CTk):
 
         self._converting = True
         self._convert_btn.configure(state="disabled")
+        self._delete_orig_btn.configure(state="disabled")
         self._stop_event.clear()
+        self._successful_original_files.clear()
 
         keep_exif = self._keep_exif_var.get()
         keep_iptc = self._keep_iptc_var.get()
@@ -439,6 +457,7 @@ class MainWindow(ctk.CTk):
                     logger.info("Poll: adding result %d/%d to history: %s", idx, total, result.source_path)
                     self._history.add_result(result)
                     if result.success:
+                        self._successful_original_files.add(result.source_path)
                         self._preview.set_before(result.source_path)
                         self._preview.set_after(result.output_path)
                 elif msg[0] == "error":
@@ -449,7 +468,40 @@ class MainWindow(ctk.CTk):
                     n = len(self._files)
                     btn_txt = f"{I18N.get('btn_convert_all')} ({n} {'Files' if I18N.current_lang() == 'en' else 'Archivos'})" if n else I18N.get('btn_convert_all')
                     self._convert_btn.configure(state="normal", text=btn_txt)
+                    
+                    if len(self._files) > 0 and len(self._successful_original_files) == len(self._files):
+                        self._delete_orig_btn.configure(state="normal")
             except Exception as exc:
                 log_exception(logger, ("Poll: exception processing message %s" % msg[0]), exc)
 
         self.after(80, self._poll_queue)
+
+    def _delete_originals(self):
+        title = I18N.get("delete_confirm_title")
+        msg = I18N.get("delete_confirm_msg")
+        if not messagebox.askyesno(title, msg, parent=self):
+            return
+            
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        deleted_count = 0
+        for fpath in list(self._successful_original_files):
+            try:
+                ext = os.path.splitext(fpath)[1].lower()
+                if ext in ('.png', '.jpeg', '.jpg') and os.path.exists(fpath):
+                    os.remove(fpath)
+                    self._successful_original_files.discard(fpath)
+                    deleted_count += 1
+            except Exception as e:
+                logger.error(f"Failed to delete {fpath}: {e}")
+                
+        if deleted_count > 0:
+            succ_title = I18N.get("delete_success_title")
+            succ_msg = I18N.get("delete_success_msg")
+            messagebox.showinfo(succ_title, succ_msg, parent=self)
+            
+            if not self._successful_original_files:
+                self._delete_orig_btn.configure(state="disabled")
+                
+            self._drop_zone.clear_all()

@@ -65,7 +65,12 @@ _DICT = {
         "lang_en": "English",
         "lang_es": "Español",
         "completed": "Completado",
-        "error": "Error"
+        "error": "Error",
+        "btn_delete_originals": "🗑 Eliminar archivos originales",
+        "delete_confirm_title": "Confirmar eliminación",
+        "delete_confirm_msg": "¿Estás seguro de que deseas eliminar los archivos originales (.png, .jpeg, .jpg) que ya fueron convertidos? Esta acción no se puede deshacer.",
+        "delete_success_title": "Proceso completado",
+        "delete_success_msg": "Los archivos originales se han eliminado correctamente."
     },
     "en": {
         "title": "Image Converter Pro Dashboard",
@@ -124,7 +129,12 @@ _DICT = {
         "lang_en": "English",
         "lang_es": "Español",
         "completed": "Completed",
-        "error": "Error"
+        "error": "Error",
+        "btn_delete_originals": "🗑 Delete original files",
+        "delete_confirm_title": "Confirm Deletion",
+        "delete_confirm_msg": "Are you sure you want to delete the original files (.png, .jpeg, .jpg) that have already been converted? This action cannot be undone.",
+        "delete_success_title": "Process Completed",
+        "delete_success_msg": "The original files have been successfully deleted."
     }
 }
 
