@@ -2,6 +2,15 @@
 
 Todas las novedades relevantes de este proyecto serán documentadas en este archivo.
 
+## [1.2.0] - 2026-06-06
+
+### Añadido
+- ✨ **Conversión a JPG**: Agregada la opción de convertir archivos `.avif` y `.webp` a formato `.jpg`.
+- ✨ **Selector de formato**: Integrado un control segmentado en la interfaz para alternar dinámicamente entre formatos de salida (`AVIF` y `JPG`).
+- ⚙️ **Aplanado de transparencia**: Fusión automática del canal alfa sobre un fondo blanco sólido al guardar en JPEG para evitar errores de codificación.
+- 🛡️ **Prevención de colisiones**: Generación de nombres de archivo no destructivos (ej. `nombre_converted.jpg`) cuando se intenta convertir al mismo formato.
+
+
 ## [1.1.0] - 2026-04-13
 
 ### Añadido

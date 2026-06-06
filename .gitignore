@@ -53,3 +53,4 @@ Desktop.ini
 !img/*.avif
 _test*
 *.log
+.agents/

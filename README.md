@@ -1,4 +1,4 @@
-# ⚡ ConvertirImagenes — Advanced Multiplatform AVIF Converter
+# ⚡ ConvertirImagenes — Advanced Multiplatform Image Converter (AVIF & JPG)
 
 ![Vista Previa de la Aplicación](img/app-optimizar-imagenes-desarrollo-web.avif)
 
@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
-Aplicación de escritorio profesional para la conversión masiva de imágenes a **AVIF**, optimizada para rendimiento y privacidad. Diseñada con una interfaz moderna y soporte multiplataforma nativo.
+Aplicación de escritorio profesional para la conversión masiva de imágenes a **AVIF** y **JPG**, optimizada para rendimiento y privacidad. Diseñada con una interfaz moderna y soporte multiplataforma nativo.
 
 ---
 
@@ -14,7 +14,7 @@ Aplicación de escritorio profesional para la conversión masiva de imágenes a 
 
 | Característica | Descripción |
 |---|---|
-| **Formatos** | Entrada: `PNG`, `JPG`, `JPEG`, `WebP`. Salida: `AVIF` optimizado. |
+| **Formatos** | Entrada: `PNG`, `JPG`, `JPEG`, `WebP`, `AVIF`. Salida: `AVIF` o `JPG` optimizado. |
 | **Interfaz Moderna** | Basada en `CustomTkinter` con soporte de temas y diseño responsivo. |
 | **Drag & Drop** | Soporte nativo robusto en Windows, macOS y Linux. |
 | **Paralelismo** | Procesamiento multi-hilo adaptable al número de núcleos del CPU. |
@@ -22,7 +22,7 @@ Aplicación de escritorio profesional para la conversión masiva de imágenes a 
 | **Edición de Metadata** | Formulario integrado para modificar Autor, Título, Copyright y más. |
 | **Redimensionado** | Redimensionado automático con preservación de relación de aspecto. |
 | **Vista Previa** | Comparativa visual Antes/Después con tamaños y % de ahorro. |
-| **Transparencia** | Preservación automática de canal alpha (RGBA) forzando subsampling 4:4:4. |
+| **Transparencia** | Preservación automática de canal alpha (RGBA) forzando subsampling 4:4:4 (para AVIF) y fusión sobre fondo blanco sólido (para JPG). |
 | **Multilingüe** | Soporte completo para Español e Inglés (conmutación en caliente). |
 | **Seguridad** | Auditoría DevSecOps: logs sanitizados, soporte para `.env` y rutas relativas. |
 
