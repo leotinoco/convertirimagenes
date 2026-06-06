@@ -91,6 +91,7 @@ class Converter:
         speed: int = 5,
         subsampling: str = "4:2:0",
         resize_cfg: dict | None = None,
+        output_format: str = "avif",
     ) -> ConversionResult:
         """
         Convert a single image to AVIF.
@@ -116,7 +117,7 @@ class Converter:
         resize_cfg : dict | None
             {"enabled": bool, "width": int, "height": int}.
         """
-        output_path = build_output_path(input_path, output_dir)
+        output_path = build_output_path(input_path, output_dir, output_format)
         original_size = get_file_size(input_path)
 
         try:
@@ -138,27 +139,45 @@ class Converter:
                         target_w = int(w * (target_h / h))
                         img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-                # 2. Normalise mode: AVIF supports RGB and RGBA
+                # 2. Normalise mode: AVIF supports RGB and RGBA; JPEG only RGB.
                 #    Also handle palette images ("P") that may have transparency.
                 has_alpha = (
                     img.mode in ("RGBA", "LA", "PA")
                     or (img.mode == "P" and "transparency" in img.info)
                 )
-                if img.mode not in ("RGB", "RGBA"):
-                    img = img.convert("RGBA" if has_alpha else "RGB")
-                    has_alpha = img.mode == "RGBA"  # re-check after conversion
 
-                # Force 4:4:4 chroma subsampling for RGBA images.
-                # 4:2:0 does not carry alpha information correctly in some
-                # libavif builds and will silently drop the transparency.
-                effective_subsampling = "4:4:4" if has_alpha else subsampling
+                if output_format.lower() in ("jpg", "jpeg"):
+                    # JPEG does not support alpha, paste onto white background
+                    if has_alpha:
+                        bg = Image.new("RGB", img.size, (255, 255, 255))
+                        if img.mode != "RGBA":
+                            img = img.convert("RGBA")
+                        bg.paste(img, mask=img.split()[3])
+                        img = bg
+                    elif img.mode != "RGB":
+                        img = img.convert("RGB")
+                    
+                    effective_subsampling = "4:2:0"  # default standard JPEG subsampling
+                    save_kwargs: dict = {
+                        "format": "JPEG",
+                        "quality": quality,
+                    }
+                else:
+                    if img.mode not in ("RGB", "RGBA"):
+                        img = img.convert("RGBA" if has_alpha else "RGB")
+                        has_alpha = img.mode == "RGBA"  # re-check after conversion
 
-                save_kwargs: dict = {
-                    "format": "AVIF",
-                    "quality": quality,
-                    "speed": speed,
-                    "subsampling": effective_subsampling,
-                }
+                    # Force 4:4:4 chroma subsampling for RGBA images.
+                    # 4:2:0 does not carry alpha information correctly in some
+                    # libavif builds and will silently drop the transparency.
+                    effective_subsampling = "4:4:4" if has_alpha else subsampling
+
+                    save_kwargs: dict = {
+                        "format": "AVIF",
+                        "quality": quality,
+                        "speed": speed,
+                        "subsampling": effective_subsampling,
+                    }
 
                 if keep_iptc:
                     iptc_bytes = img.info.get("iptc")
@@ -175,7 +194,8 @@ class Converter:
 
                 # Write to a temp file first, then atomically replace.
                 dest_dir = str(pathlib.Path(output_path).parent)
-                fd, tmp_path = tempfile.mkstemp(suffix=".avif.tmp", dir=dest_dir)
+                tmp_suffix = f".{output_format.lower()}.tmp"
+                fd, tmp_path = tempfile.mkstemp(suffix=tmp_suffix, dir=dest_dir)
                 try:
                     os.close(fd)
                     img.save(tmp_path, **save_kwargs)
@@ -226,6 +246,7 @@ class Converter:
         max_workers: int | None = None,
         progress_cb: Callable[[int, int, ConversionResult], None] | None = None,
         stop_event: threading.Event | None = None,
+        output_format: str = "avif",
     ) -> list[ConversionResult]:
         """
         Convert multiple images in parallel.
@@ -259,7 +280,8 @@ class Converter:
                     custom_meta,
                     speed,
                     subsampling,
-                    resize_cfg
+                    resize_cfg,
+                    output_format,
                 )
                 futures[future] = path
 

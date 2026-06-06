@@ -229,9 +229,11 @@ class DropZone(ctk.CTkFrame):
         paths = filedialog.askopenfilenames(
             title="Seleccionar imágenes",
             filetypes=[
-                ("Imágenes", "*.png *.jpg *.jpeg"),
+                ("Imágenes", "*.png *.jpg *.jpeg *.webp *.avif"),
                 ("PNG", "*.png"),
                 ("JPEG", "*.jpg *.jpeg"),
+                ("WebP", "*.webp"),
+                ("AVIF", "*.avif"),
             ],
         )
         if paths:

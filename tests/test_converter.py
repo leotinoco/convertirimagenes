@@ -50,16 +50,35 @@ class TestConverter(unittest.TestCase):
         img_rgba.save(cls.rgba_path, format="PNG")
 
     # ------------------------------------------------------------------
-    def _convert(self, preset: str, path: str | None = None):
+    def _convert(self, preset: str, path: str | None = None, output_format: str = "avif"):
         src = path or self.png_path
         out_dir = os.path.join(self.tmp, preset)
         os.makedirs(out_dir, exist_ok=True)
-        return self.conv.convert_one(src, out_dir, quality_preset=preset)
+        from core.converter import PRESETS
+        cfg = PRESETS[preset]
+        return self.conv.convert_one(
+            src,
+            out_dir,
+            quality=cfg["quality"],
+            speed=cfg["speed"],
+            output_format=output_format,
+        )
 
     # ------------------------------------------------------------------
     def test_output_extension_is_avif(self):
         result = self._convert("medium")
         self.assertTrue(result.output_path.endswith(".avif"), result.output_path)
+
+    def test_output_extension_is_jpg(self):
+        result = self._convert("medium", output_format="jpg")
+        self.assertTrue(result.output_path.endswith(".jpg"), result.output_path)
+
+    def test_rgba_to_jpg_white_bg(self):
+        result = self._convert("medium", path=self.rgba_path, output_format="jpg")
+        self.assertTrue(result.success, msg=result.error)
+        self.assertTrue(os.path.isfile(result.output_path))
+        with Image.open(result.output_path) as img:
+            self.assertEqual(img.mode, "RGB")
 
     def test_filename_stem_preserved(self):
         result = self._convert("medium")
@@ -126,6 +145,8 @@ class TestFileUtils(unittest.TestCase):
         from utils.file_utils import is_valid_image
         self.assertTrue(is_valid_image("photo.JPG"))
         self.assertTrue(is_valid_image("image.png"))
+        self.assertTrue(is_valid_image("image.webp"))
+        self.assertTrue(is_valid_image("image.avif"))
         self.assertFalse(is_valid_image("document.pdf"))
 
     def test_build_output_path_same_dir(self):
@@ -137,6 +158,12 @@ class TestFileUtils(unittest.TestCase):
         self.assertEqual(out_path.suffix, ".avif")
         self.assertEqual(out_path.stem, "photo")
         self.assertEqual(out_path.parent, pathlib.Path(src).parent)
+
+        # Test jpg format and overwrite prevention
+        out_jpg = build_output_path(src, output_format="jpg")
+        out_jpg_path = pathlib.Path(out_jpg)
+        self.assertEqual(out_jpg_path.suffix, ".jpg")
+        self.assertEqual(out_jpg_path.stem, "photo_converted")
 
     def test_build_output_path_custom_dir(self):
         import pathlib, tempfile

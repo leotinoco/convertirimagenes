@@ -186,9 +186,26 @@ class MainWindow(ctk.CTk):
         lbl = ctk.CTkLabel(mid, textvariable=I18N.tvar(mid, "settings_hdr"), font=("Segoe UI Semibold", 14), anchor="w")
         lbl.grid(row=0, column=0, sticky="w", padx=12, pady=(10, 10))
 
+        # Output Format Selector
+        fmt_frame = ctk.CTkFrame(mid, fg_color="#111820", corner_radius=8)
+        fmt_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 15))
+        fmt_frame.columnconfigure(0, weight=1)
+        
+        ctk.CTkLabel(fmt_frame, textvariable=I18N.tvar(fmt_frame, "fmt_hdr"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 5))
+        
+        self._output_format_var = tk.StringVar(value="AVIF")
+        self._format_switch = ctk.CTkSegmentedButton(
+            fmt_frame,
+            values=["AVIF", "JPG"],
+            variable=self._output_format_var,
+            command=self._on_format_changed,
+            font=("Segoe UI", 12)
+        )
+        self._format_switch.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 12))
+
         # 1. Settings & Optimization
         opt_frame = ctk.CTkFrame(mid, fg_color="#111820", corner_radius=8)
-        opt_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 15))
+        opt_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 15))
         opt_frame.columnconfigure(0, weight=1)
         
         ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "settings_opt"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 5))
@@ -202,16 +219,19 @@ class MainWindow(ctk.CTk):
         ctk.CTkLabel(q_frame, textvariable=self._quality_var, font=("Segoe UI", 12)).grid(row=0, column=2, sticky="e")
         ctk.CTkSlider(q_frame, from_=0, to=100, variable=self._quality_var, command=lambda v: self._quality_var.set(int(v))).grid(row=1, column=0, columnspan=3, sticky="ew", pady=(2,0))
 
-        ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "speed_lbl"), font=("Segoe UI", 12)).grid(row=2, column=0, sticky="w", padx=12, pady=(5, 0))
+        self._speed_lbl = ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "speed_lbl"), font=("Segoe UI", 12))
+        self._speed_lbl.grid(row=2, column=0, sticky="w", padx=12, pady=(5, 0))
         self._speed_map = {I18N.get("speed_slow"): 2, I18N.get("speed_med"): 5, I18N.get("speed_fast"): 8}
         self._speed_menu = ctk.CTkOptionMenu(opt_frame, values=list(self._speed_map.keys()), font=("Segoe UI", 12))
         self._speed_menu.grid(row=3, column=0, sticky="ew", padx=12, pady=(2, 2))
         
-        ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "sub_lbl"), font=("Segoe UI", 12)).grid(row=4, column=0, sticky="w", padx=12, pady=(5, 0))
+        self._sub_lbl = ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "sub_lbl"), font=("Segoe UI", 12))
+        self._sub_lbl.grid(row=4, column=0, sticky="w", padx=12, pady=(5, 0))
         self._subsampling_menu = ctk.CTkOptionMenu(opt_frame, values=[I18N.get("sub_420"), I18N.get("sub_444")], font=("Segoe UI", 12))
         self._subsampling_menu.grid(row=5, column=0, sticky="ew", padx=12, pady=(2, 0))
 
-        ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "sub_warn"), font=("Segoe UI", 10), text_color="#a0b0c0").grid(row=6, column=0, sticky="w", padx=12, pady=(2, 5))
+        self._sub_warn_lbl = ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "sub_warn"), font=("Segoe UI", 10), text_color="#a0b0c0")
+        self._sub_warn_lbl.grid(row=6, column=0, sticky="w", padx=12, pady=(2, 5))
 
         # Threads slider (CPU count)
         t_frame = ctk.CTkFrame(opt_frame, fg_color="transparent")
@@ -226,7 +246,7 @@ class MainWindow(ctk.CTk):
 
         # 2. Resizing Options
         res_frame = ctk.CTkFrame(mid, fg_color="#111820", corner_radius=8)
-        res_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 15))
+        res_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 15))
         res_frame.columnconfigure(1, weight=1)
         
         ctk.CTkLabel(res_frame, textvariable=I18N.tvar(res_frame, "resize_hdr"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 5))
@@ -252,7 +272,7 @@ class MainWindow(ctk.CTk):
 
         # 3. Metadata
         meta_frame = ctk.CTkFrame(mid, fg_color="#111820", corner_radius=8)
-        meta_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
+        meta_frame.grid(row=4, column=0, sticky="ew", padx=10, pady=(0, 10))
         meta_frame.columnconfigure(1, weight=1)
         
         ctk.CTkLabel(meta_frame, textvariable=I18N.tvar(meta_frame, "meta_hdr"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 5))
@@ -308,6 +328,18 @@ class MainWindow(ctk.CTk):
         state = "normal" if is_on else "disabled"
         self._resize_w.configure(state=state)
         self._resize_h.configure(state=state)
+
+    def _on_format_changed(self, value):
+        state = "normal" if value == "AVIF" else "disabled"
+        self._speed_menu.configure(state=state)
+        self._subsampling_menu.configure(state=state)
+        
+        # Dim labels if disabled
+        lbl_color = "#ffffff" if value == "AVIF" else "#555555"
+        warn_color = "#a0b0c0" if value == "AVIF" else "#555555"
+        self._speed_lbl.configure(text_color=lbl_color)
+        self._sub_lbl.configure(text_color=lbl_color)
+        self._sub_warn_lbl.configure(text_color=warn_color)
 
     def _on_width_changed(self, event):
         if not self._files or not self._resize_var.get() or event.keysym in ("Tab", "Return"): return
@@ -406,14 +438,16 @@ class MainWindow(ctk.CTk):
         keep_exif = self._keep_exif_var.get()
         keep_iptc = self._keep_iptc_var.get()
 
+        output_format = self._output_format_var.get().lower()
+
         thread = threading.Thread(
             target=self._run_batch,
-            args=(self._files.copy(), None, quality, keep_exif, keep_iptc, self._custom_meta, speed, subsampling, resize_cfg),
+            args=(self._files.copy(), None, quality, keep_exif, keep_iptc, self._custom_meta, speed, subsampling, resize_cfg, output_format),
             daemon=True,
         )
         thread.start()
 
-    def _run_batch(self, files, output_dir, quality, keep_exif, keep_iptc, custom_meta, speed, subsampling, resize_cfg):
+    def _run_batch(self, files, output_dir, quality, keep_exif, keep_iptc, custom_meta, speed, subsampling, resize_cfg, output_format):
         import logging
         logger = logging.getLogger(__name__)
 
@@ -434,6 +468,7 @@ class MainWindow(ctk.CTk):
                 resize_cfg   = resize_cfg,
                 progress_cb  = progress_cb,
                 stop_event   = self._stop_event,
+                output_format = output_format,
             )
         except Exception as exc:
             log_exception(logger, "convert_batch raised", exc)
@@ -489,7 +524,7 @@ class MainWindow(ctk.CTk):
         for fpath in list(self._successful_original_files):
             try:
                 ext = os.path.splitext(fpath)[1].lower()
-                if ext in ('.png', '.jpeg', '.jpg') and os.path.exists(fpath):
+                if ext in ('.png', '.jpeg', '.jpg', '.webp', '.avif') and os.path.exists(fpath):
                     os.remove(fpath)
                     self._successful_original_files.discard(fpath)
                     deleted_count += 1

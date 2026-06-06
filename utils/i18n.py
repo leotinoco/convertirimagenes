@@ -9,9 +9,10 @@ _LANG = "es"
 
 _DICT = {
     "es": {
-        "title": "ConvertirImagenes — PNG/JPG → AVIF",
+        "title": "ConvertirImagenes — Conversor de Imágenes",
         "drop_title": "⬇ Arrastra imágenes aquí",
-        "drop_sub": "PNG, JPG soportados",
+        "drop_sub": "PNG, JPG, WebP, AVIF soportados",
+        "fmt_hdr": "Formato de Salida",
         "btn_browse": "📂 Examinar archivos",
         "btn_clear": "🗑 Limpiar lista",
         "file_mgmt": "Gestor de Archivos",
@@ -68,14 +69,15 @@ _DICT = {
         "error": "Error",
         "btn_delete_originals": "🗑 Eliminar archivos originales",
         "delete_confirm_title": "Confirmar eliminación",
-        "delete_confirm_msg": "¿Estás seguro de que deseas eliminar los archivos originales (.png, .jpeg, .jpg) que ya fueron convertidos? Esta acción no se puede deshacer.",
+        "delete_confirm_msg": "¿Estás seguro de que deseas eliminar los archivos originales (.png, .jpg, .jpeg, .webp, .avif) que ya fueron convertidos? Esta acción no se puede deshacer.",
         "delete_success_title": "Proceso completado",
         "delete_success_msg": "Los archivos originales se han eliminado correctamente."
     },
     "en": {
         "title": "Image Converter Pro Dashboard",
         "drop_title": "Drag & Drop Images Here",
-        "drop_sub": "PNG, JPG supported",
+        "drop_sub": "PNG, JPG, WebP, AVIF supported",
+        "fmt_hdr": "Output Format",
         "btn_browse": "📂 Browse files",
         "btn_clear": "🗑 Clear list",
         "file_mgmt": "File Management",
@@ -132,7 +134,7 @@ _DICT = {
         "error": "Error",
         "btn_delete_originals": "🗑 Delete original files",
         "delete_confirm_title": "Confirm Deletion",
-        "delete_confirm_msg": "Are you sure you want to delete the original files (.png, .jpeg, .jpg) that have already been converted? This action cannot be undone.",
+        "delete_confirm_msg": "Are you sure you want to delete the original files (.png, .jpg, .jpeg, .webp, .avif) that have already been converted? This action cannot be undone.",
         "delete_success_title": "Process Completed",
         "delete_success_msg": "The original files have been successfully deleted."
     }

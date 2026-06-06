@@ -4,7 +4,7 @@ file_utils.py — helpers for path and size formatting
 import os
 import pathlib
 
-VALID_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+VALID_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".avif"}
 
 
 def format_bytes(size_bytes: int) -> str:
@@ -25,9 +25,9 @@ def is_valid_image(path: str) -> bool:
     return ext in VALID_EXTENSIONS
 
 
-def build_output_path(input_path: str, output_dir: str | None = None) -> str:
+def build_output_path(input_path: str, output_dir: str | None = None, output_format: str = "avif") -> str:
     """
-    Build the output .avif path.
+    Build the output path with the appropriate extension.
 
     If *output_dir* is None or empty, the converted file is saved next to the
     original. Otherwise it is saved to *output_dir*.
@@ -38,7 +38,15 @@ def build_output_path(input_path: str, output_dir: str | None = None) -> str:
         dest_dir = pathlib.Path(output_dir)
     else:
         dest_dir = src.parent
-    return str(dest_dir / f"{stem}.avif")
+    
+    ext = f".{output_format.lower()}"
+    out_path = dest_dir / f"{stem}{ext}"
+    
+    # If the output path is identical to the input path, avoid overwriting it
+    if out_path.resolve() == src.resolve():
+        out_path = dest_dir / f"{stem}_converted{ext}"
+        
+    return str(out_path)
 
 
 def get_file_size(path: str) -> int:
