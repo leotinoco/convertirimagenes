@@ -24,7 +24,7 @@ import urllib.parse
 logger = logging.getLogger(__name__)
 
 # Supported input image extensions (lowercase, with leading dot)
-_VALID_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".webp", ".tiff", ".tif", ".bmp"})
+_VALID_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".webp", ".avif"})
 
 
 def parse_drop_paths(raw: str) -> list[str]:
