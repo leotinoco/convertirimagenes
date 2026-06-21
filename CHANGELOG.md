@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.1] - 2026-06-21
+
+### Corregido
+- actualiza extensiones válidas de arrastre y agrega pruebas unitarias
+
 ## [1.2.0] - 2026-06-21
 
 ### Añadido
