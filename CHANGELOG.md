@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.0] - 2026-06-21
+
+### Añadido
+- agrega soporte para formato PNG y ajusta la UI
+- agrega opcion de conversion a JPG
+
+### Documentación
+- actualiza documentacion y excluye .agents
+
 Todas las novedades relevantes de este proyecto serán documentadas en este archivo.
 
 ## [1.2.0] - 2026-06-06
