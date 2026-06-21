@@ -63,6 +63,8 @@ class MainWindow(ctk.CTk):
             pass  # Error shown on convert
 
         self._build_ui()
+        # Default excluded format
+        self._drop_zone.set_excluded_format(".avif")
         self.after(100, self._poll_queue)
 
         # --- Bootstrap TkinterDnD2 AFTER ctk.CTk is fully initialized ---
@@ -170,6 +172,8 @@ class MainWindow(ctk.CTk):
             height=46,
             fg_color="#e63946",
             hover_color="#d62828",
+            text_color="#ffffff",
+            text_color_disabled="#e0e0e0",
             state="disabled",
             command=self._delete_originals,
         )
@@ -196,7 +200,7 @@ class MainWindow(ctk.CTk):
         self._output_format_var = tk.StringVar(value="AVIF")
         self._format_switch = ctk.CTkSegmentedButton(
             fmt_frame,
-            values=["AVIF", "JPG"],
+            values=["AVIF", "JPG", "PNG"],
             variable=self._output_format_var,
             command=self._on_format_changed,
             font=("Segoe UI", 12)
@@ -210,14 +214,14 @@ class MainWindow(ctk.CTk):
         
         ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "settings_opt"), font=("Segoe UI Semibold", 12)).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 5))
         
-        q_frame = ctk.CTkFrame(opt_frame, fg_color="transparent")
-        q_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 2))
-        q_frame.columnconfigure(1, weight=1)
+        self._q_frame = ctk.CTkFrame(opt_frame, fg_color="transparent")
+        self._q_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 2))
+        self._q_frame.columnconfigure(1, weight=1)
         
-        ctk.CTkLabel(q_frame, textvariable=I18N.tvar(q_frame, "q_lbl"), font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(self._q_frame, textvariable=I18N.tvar(self._q_frame, "q_lbl"), font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
         self._quality_var = tk.IntVar(value=65)
-        ctk.CTkLabel(q_frame, textvariable=self._quality_var, font=("Segoe UI", 12)).grid(row=0, column=2, sticky="e")
-        ctk.CTkSlider(q_frame, from_=0, to=100, variable=self._quality_var, command=lambda v: self._quality_var.set(int(v))).grid(row=1, column=0, columnspan=3, sticky="ew", pady=(2,0))
+        ctk.CTkLabel(self._q_frame, textvariable=self._quality_var, font=("Segoe UI", 12)).grid(row=0, column=2, sticky="e")
+        ctk.CTkSlider(self._q_frame, from_=0, to=100, variable=self._quality_var, command=lambda v: self._quality_var.set(int(v))).grid(row=1, column=0, columnspan=3, sticky="ew", pady=(2,0))
 
         self._speed_lbl = ctk.CTkLabel(opt_frame, textvariable=I18N.tvar(opt_frame, "speed_lbl"), font=("Segoe UI", 12))
         self._speed_lbl.grid(row=2, column=0, sticky="w", padx=12, pady=(5, 0))
@@ -330,16 +334,30 @@ class MainWindow(ctk.CTk):
         self._resize_h.configure(state=state)
 
     def _on_format_changed(self, value):
-        state = "normal" if value == "AVIF" else "disabled"
-        self._speed_menu.configure(state=state)
-        self._subsampling_menu.configure(state=state)
-        
-        # Dim labels if disabled
-        lbl_color = "#ffffff" if value == "AVIF" else "#555555"
-        warn_color = "#a0b0c0" if value == "AVIF" else "#555555"
-        self._speed_lbl.configure(text_color=lbl_color)
-        self._sub_lbl.configure(text_color=lbl_color)
-        self._sub_warn_lbl.configure(text_color=warn_color)
+        fmt = value.lower()
+        self._drop_zone.set_excluded_format(f".{fmt}")
+
+        if fmt == "avif":
+            self._q_frame.grid()
+            self._speed_lbl.grid()
+            self._speed_menu.grid()
+            self._sub_lbl.grid()
+            self._subsampling_menu.grid()
+            self._sub_warn_lbl.grid()
+        elif fmt == "jpg":
+            self._q_frame.grid()
+            self._speed_lbl.grid_remove()
+            self._speed_menu.grid_remove()
+            self._sub_lbl.grid_remove()
+            self._subsampling_menu.grid_remove()
+            self._sub_warn_lbl.grid_remove()
+        elif fmt == "png":
+            self._q_frame.grid_remove()
+            self._speed_lbl.grid_remove()
+            self._speed_menu.grid_remove()
+            self._sub_lbl.grid_remove()
+            self._subsampling_menu.grid_remove()
+            self._sub_warn_lbl.grid_remove()
 
     def _on_width_changed(self, event):
         if not self._files or not self._resize_var.get() or event.keysym in ("Tab", "Return"): return

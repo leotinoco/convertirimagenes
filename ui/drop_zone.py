@@ -100,6 +100,7 @@ class DropZone(ctk.CTkFrame):
         super().__init__(master, **kwargs)
         self.on_files_changed = on_files_changed
         self._files: list[str] = []
+        self._excluded_format: str = ""
 
         self._build_ui()
         # Schedule DnD registration for next idle loop so the widget tree
@@ -226,15 +227,20 @@ class DropZone(ctk.CTkFrame):
     # Handlers
     # ------------------------------------------------------------------
     def _browse(self):
+        types = [("Imágenes", "*.png *.jpg *.jpeg *.webp *.avif")]
+        
+        if self._excluded_format != ".png":
+            types.append(("PNG", "*.png"))
+        if self._excluded_format not in (".jpg", ".jpeg"):
+            types.append(("JPEG", "*.jpg *.jpeg"))
+        if self._excluded_format != ".webp":
+            types.append(("WebP", "*.webp"))
+        if self._excluded_format != ".avif":
+            types.append(("AVIF", "*.avif"))
+
         paths = filedialog.askopenfilenames(
             title="Seleccionar imágenes",
-            filetypes=[
-                ("Imágenes", "*.png *.jpg *.jpeg *.webp *.avif"),
-                ("PNG", "*.png"),
-                ("JPEG", "*.jpg *.jpeg"),
-                ("WebP", "*.webp"),
-                ("AVIF", "*.avif"),
-            ],
+            filetypes=types,
         )
         if paths:
             self.add_files(list(paths))
@@ -274,11 +280,17 @@ class DropZone(ctk.CTkFrame):
         added = 0
         for p in paths:
             p = p.strip()
-            if p and os.path.isfile(p) and is_valid_image(p) and p not in self._files:
-                self._files.append(p)
-                row = FileRow(self._list_frame, p, self._remove_file)
-                row.pack(fill="x", padx=4, pady=2)
-                added += 1
+            if not p or not os.path.isfile(p) or not is_valid_image(p) or p in self._files:
+                continue
+                
+            ext = os.path.splitext(p)[1].lower()
+            if self._excluded_format and ext == self._excluded_format:
+                continue
+                
+            self._files.append(p)
+            row = FileRow(self._list_frame, p, self._remove_file)
+            row.pack(fill="x", padx=4, pady=2)
+            added += 1
         if added:
             self._update_count()
             if self.on_files_changed:
@@ -294,3 +306,14 @@ class DropZone(ctk.CTkFrame):
 
     def get_files(self) -> list[str]:
         return self._files.copy()
+
+    def set_excluded_format(self, fmt: str):
+        self._excluded_format = fmt.lower()
+        # Remove any existing files that match the newly excluded format
+        to_remove = []
+        for p in self._files:
+            if os.path.splitext(p)[1].lower() == self._excluded_format:
+                to_remove.append(p)
+                
+        for p in to_remove:
+            self._remove_file(p)

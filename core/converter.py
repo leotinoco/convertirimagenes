@@ -162,6 +162,15 @@ class Converter:
                         "format": "JPEG",
                         "quality": quality,
                     }
+                elif output_format.lower() == "png":
+                    if img.mode not in ("RGB", "RGBA", "L", "LA"):
+                        img = img.convert("RGBA" if has_alpha else "RGB")
+                    
+                    effective_subsampling = ""
+                    save_kwargs: dict = {
+                        "format": "PNG",
+                        "optimize": True,
+                    }
                 else:
                     if img.mode not in ("RGB", "RGBA"):
                         img = img.convert("RGBA" if has_alpha else "RGB")
