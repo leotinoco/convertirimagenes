@@ -37,10 +37,21 @@ class TestConverter(unittest.TestCase):
         cls.conv = Converter()
         cls.tmp = tempfile.mkdtemp(prefix="avif_test_")
 
-        # 800×600 RGB gradient
+        # 800×600 RGB pseudo-photographic image (gradient + deterministic
+        # noise). A pure gradient compresses to ~2 KB as PNG — smaller than
+        # any AVIF — which made savings assertions encoder-dependent.
+        import random
+        rnd = random.Random(42)
         cls.png_path = os.path.join(cls.tmp, "test_rgb.png")
         img_rgb = Image.new("RGB", (800, 600))
-        pixels = [(x % 256, y % 256, (x + y) % 256) for y in range(600) for x in range(800)]
+        pixels = [
+            (
+                min(255, x % 256 + rnd.randint(0, 40)),
+                min(255, y % 256 + rnd.randint(0, 40)),
+                min(255, (x + y) % 256 + rnd.randint(0, 40)),
+            )
+            for y in range(600) for x in range(800)
+        ]
         img_rgb.putdata(pixels)
         img_rgb.save(cls.png_path, format="PNG")
 
@@ -120,6 +131,19 @@ class TestConverter(unittest.TestCase):
         self.assertTrue(result.success, msg=result.error)
         self.assertTrue(os.path.isfile(result.output_path))
 
+    def test_output_extension_is_webp(self):
+        result = self._convert("medium", output_format="webp")
+        self.assertTrue(result.success, msg=result.error)
+        self.assertTrue(result.output_path.endswith(".webp"), result.output_path)
+        with Image.open(result.output_path) as img:
+            self.assertEqual(img.format, "WEBP")
+
+    def test_rgba_to_webp_keeps_alpha(self):
+        result = self._convert("medium", path=self.rgba_path, output_format="webp")
+        self.assertTrue(result.success, msg=result.error)
+        with Image.open(result.output_path) as img:
+            self.assertEqual(img.mode, "RGBA")
+
     def test_all_three_presets_produce_files(self):
         for preset in ("high", "medium", "low"):
             with self.subTest(preset=preset):
@@ -164,6 +188,21 @@ class TestFileUtils(unittest.TestCase):
         out_jpg_path = pathlib.Path(out_jpg)
         self.assertEqual(out_jpg_path.suffix, ".jpg")
         self.assertEqual(out_jpg_path.stem, "photo_converted")
+
+    def test_build_output_path_with_suffix(self):
+        import pathlib
+        from utils.file_utils import build_output_path
+        src = str(pathlib.Path.home() / "photo.jpg")
+        out = pathlib.Path(build_output_path(src, output_format="avif", suffix="-opt"))
+        self.assertEqual(out.stem, "photo-opt")
+        self.assertEqual(out.suffix, ".avif")
+
+    def test_sanitize_suffix_strips_unsafe_chars(self):
+        from utils.file_utils import sanitize_suffix
+        self.assertEqual(sanitize_suffix('-opt'), '-opt')
+        self.assertEqual(sanitize_suffix('../evil'), '..evil')
+        self.assertEqual(sanitize_suffix('a/b\\c:d*e'), 'abcde')
+        self.assertEqual(sanitize_suffix(None), '')
 
     def test_build_output_path_custom_dir(self):
         import pathlib, tempfile

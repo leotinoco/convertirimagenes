@@ -71,7 +71,19 @@ _DICT = {
         "delete_confirm_title": "Confirmar eliminación",
         "delete_confirm_msg": "¿Estás seguro de que deseas eliminar los archivos originales (.png, .jpg, .jpeg, .webp, .avif) que ya fueron convertidos? Esta acción no se puede deshacer.",
         "delete_success_title": "Proceso completado",
-        "delete_success_msg": "Los archivos originales se han eliminado correctamente."
+        "delete_success_msg": "Los archivos originales se han eliminado correctamente.",
+        "out_hdr": "Destino de Salida",
+        "out_same_folder": "Junto al original",
+        "btn_choose_folder": "📁 Elegir carpeta",
+        "btn_reset_folder": "↺",
+        "suffix_lbl": "Sufijo del archivo (opcional)",
+        "btn_cancel_conv": "⏹ Cancelar",
+        "status_idle": "Listo para convertir",
+        "status_converting": "Convirtiendo…",
+        "status_canceled": "Conversión cancelada",
+        "disk_title": "Espacio insuficiente",
+        "disk_msg": "No hay suficiente espacio libre en el disco de destino para completar la conversión.",
+        "summary_saved": "Ahorro total"
     },
     "en": {
         "title": "Image Converter Pro Dashboard",
@@ -136,7 +148,19 @@ _DICT = {
         "delete_confirm_title": "Confirm Deletion",
         "delete_confirm_msg": "Are you sure you want to delete the original files (.png, .jpg, .jpeg, .webp, .avif) that have already been converted? This action cannot be undone.",
         "delete_success_title": "Process Completed",
-        "delete_success_msg": "The original files have been successfully deleted."
+        "delete_success_msg": "The original files have been successfully deleted.",
+        "out_hdr": "Output Destination",
+        "out_same_folder": "Same folder as original",
+        "btn_choose_folder": "📁 Choose folder",
+        "btn_reset_folder": "↺",
+        "suffix_lbl": "Filename suffix (optional)",
+        "btn_cancel_conv": "⏹ Cancel",
+        "status_idle": "Ready to convert",
+        "status_converting": "Converting…",
+        "status_canceled": "Conversion canceled",
+        "disk_title": "Insufficient disk space",
+        "disk_msg": "There is not enough free space on the destination disk to complete the conversion.",
+        "summary_saved": "Total savings"
     }
 }
 

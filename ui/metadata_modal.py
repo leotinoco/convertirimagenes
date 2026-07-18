@@ -6,6 +6,7 @@ from __future__ import annotations
 import customtkinter as ctk
 import tkinter as tk
 from utils.i18n import I18N
+from utils import theme
 
 class MetadataModal(ctk.CTkToplevel):
     def __init__(self, master, current_meta: dict | None = None, on_save=None):
@@ -38,11 +39,11 @@ class MetadataModal(ctk.CTkToplevel):
         ctk.CTkLabel(
             hdr, 
             textvariable=I18N.tvar(hdr, "edit_meta_title"),
-            font=("Segoe UI Semibold", 16)
+            font=theme.font(16, "bold")
         ).pack(side="left")
 
         # Form content
-        content = ctk.CTkFrame(self, fg_color="#111820")
+        content = ctk.CTkFrame(self, fg_color=theme.CARD)
         content.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
         content.columnconfigure(1, weight=1)
 
@@ -59,7 +60,7 @@ class MetadataModal(ctk.CTkToplevel):
         ]
 
         for key, lang_key in fields:
-            lbl = ctk.CTkLabel(content, textvariable=I18N.tvar(content, lang_key), font=("Segoe UI", 12))
+            lbl = ctk.CTkLabel(content, textvariable=I18N.tvar(content, lang_key), font=theme.font(12))
             lbl.grid(row=row, column=0, sticky="w", padx=10, pady=(10, 0))
             
             val = self._current_meta.get(key, "")
@@ -68,7 +69,7 @@ class MetadataModal(ctk.CTkToplevel):
             
             # For description, it would be nice to have a larger entry but CTkTextbox is harder to bind vars to.
             # Entry is fine for this task.
-            entry = ctk.CTkEntry(content, textvariable=var, font=("Segoe UI", 12))
+            entry = ctk.CTkEntry(content, textvariable=var, font=theme.font(12))
             entry.grid(row=row+1, column=0, sticky="ew", padx=10, pady=(4, 10))
             row += 2
 
@@ -79,10 +80,10 @@ class MetadataModal(ctk.CTkToplevel):
         cancel = ctk.CTkButton(
             footer, 
             textvariable=I18N.tvar(footer, "cancel"), 
-            font=("Segoe UI", 12),
+            font=theme.font(12),
             width=100,
-            fg_color="#3a1a1a",
-            hover_color="#5a2a2a",
+            fg_color=theme.CARD_ALT,
+            hover_color=theme.DANGER_SOFT,
             command=self.destroy
         )
         cancel.pack(side="left", padx=(0, 10))
@@ -90,7 +91,7 @@ class MetadataModal(ctk.CTkToplevel):
         save = ctk.CTkButton(
             footer, 
             textvariable=I18N.tvar(footer, "save"),
-            font=("Segoe UI Semibold", 12),
+            font=theme.font(12, "bold"),
             width=100,
             command=self._save
         )

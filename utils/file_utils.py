@@ -25,27 +25,42 @@ def is_valid_image(path: str) -> bool:
     return ext in VALID_EXTENSIONS
 
 
-def build_output_path(input_path: str, output_dir: str | None = None, output_format: str = "avif") -> str:
+def sanitize_suffix(suffix: str) -> str:
+    """Keep only filename-safe characters in a user-provided suffix."""
+    import re
+    return re.sub(r'[^A-Za-z0-9._\-]', '', suffix or "")[:40]
+
+
+def build_output_path(
+    input_path: str,
+    output_dir: str | None = None,
+    output_format: str = "avif",
+    suffix: str = "",
+) -> str:
     """
     Build the output path with the appropriate extension.
 
     If *output_dir* is None or empty, the converted file is saved next to the
     original. Otherwise it is saved to *output_dir*.
+    *suffix* is appended to the stem: photo + "-opt" → photo-opt.avif.
     """
     src = pathlib.Path(input_path)
-    stem = src.stem
+    stem = src.stem + sanitize_suffix(suffix)
     if output_dir:
         dest_dir = pathlib.Path(output_dir)
     else:
         dest_dir = src.parent
-    
+
     ext = f".{output_format.lower()}"
     out_path = dest_dir / f"{stem}{ext}"
-    
+
     # If the output path is identical to the input path, avoid overwriting it
-    if out_path.resolve() == src.resolve():
-        out_path = dest_dir / f"{stem}_converted{ext}"
-        
+    try:
+        if out_path.resolve() == src.resolve():
+            out_path = dest_dir / f"{stem}_converted{ext}"
+    except OSError:
+        pass
+
     return str(out_path)
 
 
@@ -67,7 +82,9 @@ def show_in_file_explorer(path: str) -> None:
 
     try:
         if sys.platform == "win32":
-            subprocess.Popen(f'explorer /select,"{os.path.normpath(path)}"')
+            # List form (no string interpolation) avoids argument-injection
+            # issues with filenames containing quotes or special characters.
+            subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
         elif sys.platform == "darwin":
             subprocess.Popen(["open", "-R", path])
         else:

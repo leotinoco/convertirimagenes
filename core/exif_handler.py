@@ -25,6 +25,13 @@ def load_exif(image_path: str, custom_meta: dict | None = None) -> bytes | None:
             # Create empty if invalid or missing
             exif_dict = {"0th": {}, "Exif": {}, "GPS": {}, "Interop": {}, "1st": {}}
 
+        # The converter applies ImageOps.exif_transpose() to the pixels, so the
+        # Orientation tag must be reset to 1 to avoid double rotation in viewers.
+        try:
+            exif_dict["0th"][piexif.ImageIFD.Orientation] = 1
+        except Exception:
+            pass
+
         if custom_meta:
             # Standard TIFF/EXIF tags in 0th and Exif IFD
             if "description" in custom_meta:

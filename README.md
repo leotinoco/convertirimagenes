@@ -1,48 +1,81 @@
-# ⚡ ConvertirImagenes — Advanced Multiplatform Image Converter (AVIF & JPG)
+# ⚡ ConvertirImagenes — Conversor Masivo de Imágenes para Web (AVIF · WebP · JPG · PNG)
 
 ![Vista Previa de la Aplicación](img/app-optimizar-imagenes-desarrollo-web.avif)
 
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+![Version](https://img.shields.io/badge/version-1.3.0-orange)
 
-Aplicación de escritorio profesional para la conversión masiva de imágenes a **AVIF** y **JPG**, optimizada para rendimiento y privacidad. Diseñada con una interfaz moderna y soporte multiplataforma nativo.
+Aplicación de escritorio profesional para la **conversión masiva de imágenes**, pensada como herramienta esencial del flujo de trabajo de desarrollo web: toma lotes grandes de imágenes (PNG, JPG, WebP, AVIF) y los convierte a formatos modernos y optimizados (**AVIF, WebP, JPG o PNG**) con control fino de calidad, metadatos y dimensiones. Interfaz moderna, procesamiento paralelo y soporte multiplataforma nativo.
 
 ---
 
-## ✨ Características Principales
+## 🎯 ¿Para qué sirve?
+
+Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de una página web (LCP, peso total, Core Web Vitals). Esta herramienta resuelve ese paso completo en local, sin subir tus imágenes a servicios de terceros:
+
+- Convierte cientos de imágenes en un solo lote usando todos los núcleos del CPU.
+- Genera AVIF y WebP, los formatos con mejor compresión soportados por los navegadores modernos.
+- Muestra el ahorro de peso por archivo y el ahorro total del lote.
+- Redimensiona, renombra con sufijo y organiza la salida en la carpeta que elijas.
+- Preserva o edita los metadatos (EXIF/IPTC) según lo necesites: mantener el copyright del cliente o limpiar datos innecesarios.
+
+---
+
+## ✨ Características
 
 | Característica | Descripción |
 |---|---|
-| **Formatos** | Entrada: `PNG`, `JPG`, `JPEG`, `WebP`, `AVIF`. Salida: `AVIF` o `JPG` optimizado. |
-| **Interfaz Moderna** | Basada en `CustomTkinter` con soporte de temas y diseño responsivo. |
-| **Drag & Drop** | Soporte nativo robusto en Windows, macOS y Linux. |
-| **Paralelismo** | Procesamiento multi-hilo adaptable al número de núcleos del CPU. |
-| **Metadatos** | Preservación selectiva de EXIF e IPTC (Photoshop/Lightroom). |
-| **Edición de Metadata** | Formulario integrado para modificar Autor, Título, Copyright y más. |
-| **Redimensionado** | Redimensionado automático con preservación de relación de aspecto. |
-| **Vista Previa** | Comparativa visual Antes/Después con tamaños y % de ahorro. |
-| **Transparencia** | Preservación automática de canal alpha (RGBA) forzando subsampling 4:4:4 (para AVIF) y fusión sobre fondo blanco sólido (para JPG). |
-| **Multilingüe** | Soporte completo para Español e Inglés (conmutación en caliente). |
-| **Seguridad** | Auditoría DevSecOps: logs sanitizados, soporte para `.env` y rutas relativas. |
+| **Formatos** | Entrada: `PNG`, `JPG`, `JPEG`, `WebP`, `AVIF`. Salida: `AVIF`, `WebP`, `JPG` o `PNG` optimizados. |
+| **Procesamiento paralelo** | Conversión multi-hilo con slider para elegir cuántos núcleos del CPU usar. |
+| **Destino de salida** | Guardar junto al original o en una carpeta personalizada, con sufijo opcional (ej. `foto-opt.avif`). |
+| **Progreso y cancelación** | Barra de progreso en tiempo real (n/total), botón de cancelar y resumen de ahorro total al finalizar. |
+| **Auto-orientación EXIF** | Las fotos de móvil/cámara nunca salen giradas: los píxeles se rotan y el tag Orientation se restablece. |
+| **Calidad configurable** | Slider de calidad 0–100, esfuerzo de compresión AVIF y submuestreo de color (4:2:0 / 4:4:4). |
+| **Transparencia** | Canal alpha preservado en AVIF/WebP/PNG (con 4:4:4 forzado en AVIF); fusión sobre fondo blanco en JPG. |
+| **JPEG progresivo** | Salida JPEG con `optimize` + `progressive` para mejor carga percibida en la web. |
+| **Redimensionado** | Redimensionado LANCZOS con cálculo automático proporcional (ancho ↔ alto). |
+| **Metadatos** | Preservación selectiva de EXIF e IPTC, y editor integrado (Autor, Título, Copyright, fechas, descripción). |
+| **Drag & Drop** | Soporte nativo robusto en Windows, macOS y Linux (rutas con espacios, URIs `file://`, multi-archivo). |
+| **Vista previa** | Comparativa Antes/Después con dimensiones, tamaños y % de ahorro. |
+| **Historial** | Tabla de conversiones con estado, chroma, tamaños, ahorro, hora y acceso directo al archivo. |
+| **Multilingüe** | Español e Inglés con conmutación en caliente (conserva tus selecciones al cambiar). |
+| **Interfaz moderna** | Tema oscuro centralizado (`utils/theme.py`) con tipografía adaptada a cada sistema operativo. |
+| **Limpieza de originales** | Botón para eliminar los archivos originales tras una conversión 100% exitosa (con confirmación). |
 
 ---
 
 ## 🚀 Instalación y Uso
 
-### 1. Requisitos Previos
-- **Python 3.10+**
-- (Opcional) Un entorno virtual (recomendado): `python -m venv venv`
+### 1. Requisitos previos
 
-### 2. Instalación de Dependencias
+- **Python 3.10+**
+- (Recomendado) Entorno virtual: `python -m venv venv`
+
+### 2. Instalación de dependencias
+
 ```bash
 pip install -r requirements.txt
 ```
 
+> **macOS:** para Drag & Drop instala el fork universal: `pip install tkinterdnd2-universal`
+
 ### 3. Ejecución
+
 ```bash
 python app.py
 ```
+
+En Windows también puedes hacer doble clic en `ConvertirImagenes.bat`.
+
+### 4. Flujo de trabajo típico
+
+1. Arrastra tus imágenes (o usa **Examinar archivos**).
+2. Elige el formato de salida (AVIF para máxima compresión, WebP para compatibilidad amplia).
+3. Ajusta calidad, redimensionado, carpeta de destino y sufijo si lo necesitas.
+4. Pulsa **Convertir Todo** y observa el progreso y el ahorro total.
+5. (Opcional) Elimina los originales cuando todo haya salido bien.
 
 ---
 
@@ -51,27 +84,79 @@ python app.py
 El proyecto incluye un archivo `.spec` optimizado para **PyInstaller** que garantiza la inclusión de los binarios de Tcl/Tk necesarios para el Drag & Drop.
 
 ```bash
-# Windows / macOS / Linux
 pyinstaller ConvertirImagenes.spec
 ```
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Arquitectura del Proyecto
 
-- `app.py`: Punto de entrada que inicializa logs y variables de entorno.
-- `core/`: Motor de conversión (`ThreadPoolExecutor`), manejo de EXIF y validación de disco.
-- `ui/`: Componentes de la interfaz (Main Window, DropZone, Modales de Metadatos).
-- `utils/`: Utilidades de traducción (i18n), sanitización de rutas y gestión de logs.
-- `ConvertirImagenes.spec`: Configuración experta para PyInstaller.
+```
+convertirimagenes/
+├── app.py                  # Punto de entrada: logging, .env, arranque de la UI
+├── core/
+│   ├── converter.py        # Motor de conversión (AVIF/WebP/JPG/PNG, paralelo, atómico)
+│   ├── exif_handler.py     # Lectura/escritura EXIF + reset de orientación
+│   └── disk_validator.py   # Validación de espacio libre antes de cada lote
+├── ui/
+│   ├── main_window.py      # Ventana principal (3 columnas responsivas)
+│   ├── drop_zone.py        # Zona de arrastre + lista de archivos
+│   ├── preview_panel.py    # Comparativa Antes/Después
+│   ├── history_panel.py    # Tabla de historial con métricas
+│   └── metadata_modal.py   # Editor de metadatos
+├── utils/
+│   ├── theme.py            # Tokens de diseño: colores, tipografía, radios
+│   ├── i18n.py             # Traducciones ES/EN con StringVars reactivos
+│   ├── file_utils.py       # Rutas de salida, sufijos sanitizados, tamaños
+│   ├── dnd_utils.py        # Normalización multiplataforma del Drag & Drop
+│   ├── dnd_bootstrap.py    # Carga diferida y segura de TkinterDnD2
+│   └── logging_utils.py    # Logs sanitizados (sin rutas absolutas en producción)
+└── tests/                  # Suite de pruebas (pytest) del motor y utilidades
+```
+
+Detalles técnicos relevantes:
+
+- **Escritura atómica**: cada imagen se codifica a un archivo temporal y luego se mueve a su destino final, evitando archivos corruptos si el proceso se interrumpe.
+- **Paralelismo**: `ThreadPoolExecutor` — Pillow libera el GIL durante la codificación, por lo que los hilos escalan bien y comparten memoria de forma segura.
+- **AVIF con fallback nativo**: usa `pillow-avif-plugin` y, si no está disponible, el soporte AVIF nativo de Pillow ≥ 11.3.
+- **UI desacoplada del trabajo**: la conversión corre en un hilo aparte y se comunica con la interfaz mediante una cola (`queue.Queue`) sondeada cada 80 ms — la ventana nunca se congela.
 
 ---
 
 ## 🛡️ Seguridad y Privacidad
 
-- **Zero Leak Logging**: El sistema de logs utiliza una utilidad personalizada que evita la impresión de rutas absolutas de tu sistema (`C:\Users\Username\...`) en los informes de error.
-- **Environment Variables**: Soporte para archivos `.env` (vía `python-dotenv`) para configuraciones locales sin exponer secretos.
-- **Validación de Disco**: Verifica el espacio antes de procesar para evitar archivos corruptos.
+- **100% local**: tus imágenes nunca salen de tu equipo.
+- **Zero Leak Logging**: los logs evitan imprimir rutas absolutas del sistema (`C:\Users\...`) salvo en modo desarrollo (`DEV_MODE=true`).
+- **Anti decompression-bomb**: las imágenes maliciosamente grandes producen un error controlado en lugar de agotar la memoria.
+- **Sin inyección de argumentos**: las llamadas al explorador de archivos usan listas de argumentos, nunca strings interpolados.
+- **Sufijos sanitizados**: el sufijo de salida se limpia de caracteres de ruta (`../`, `\`, `:`…) antes de usarse.
+- **Variables de entorno**: soporte de `.env` (vía `python-dotenv`); `.gitignore` cubre `.env` y `.env.*` conservando `.env.example`.
+- **Validación de disco**: verifica el espacio libre del volumen de destino antes de procesar el lote.
+
+---
+
+## 🆕 Novedades de la versión 1.3.0
+
+Resumen de la última actualización (detalle completo en [CHANGELOG.md](CHANGELOG.md)):
+
+- **WebP como formato de salida**, con compresión máxima y transparencia.
+- **Carpeta de destino y sufijo de archivo** configurables desde la interfaz.
+- **Barra de progreso, botón cancelar y resumen de ahorro total** del lote.
+- **Auto-orientación EXIF** y **JPEG progresivo optimizado**.
+- **Rediseño visual completo** con tema centralizado y tipografía multiplataforma.
+- **Correcciones importantes**: el slider de núcleos ahora se aplica realmente, la validación de disco se ejecuta antes de cada lote, y el cambio de idioma conserva tus selecciones.
+- **Refuerzos de seguridad**: protección anti decompression-bomb, eliminación de inyección de argumentos en `explorer /select`, sufijos sanitizados y `.gitignore` ampliado.
+
+---
+
+## 🧪 Pruebas
+
+```bash
+pip install pytest
+python -m pytest tests/ -q
+```
+
+La suite cubre el motor de conversión (AVIF/WebP/JPG, transparencia, presets, sufijos), la validación de disco y el parser de Drag & Drop.
 
 ---
 

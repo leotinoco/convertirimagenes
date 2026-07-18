@@ -1,4 +1,4 @@
-"""
+r"""
 dnd_utils.py — Cross-platform drag-and-drop path normalization.
 
 Handles the notorious quirks of tkinterdnd2's event.data across

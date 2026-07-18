@@ -1,5 +1,5 @@
 """
-converter.py — core AVIF conversion engine.
+converter.py — core image conversion engine (AVIF / WebP / JPG / PNG).
 
 Quality / speed presets
 ------------------------
@@ -19,14 +19,30 @@ import threading
 from dataclasses import dataclass, field
 from typing import Callable
 
-# Register avif plugin as early as possible
+# Register avif plugin as early as possible.
+# Pillow >= 11.3 ships native AVIF support; fall back to pillow-avif-plugin.
 try:
     import pillow_avif  # noqa: F401  registers itself with Pillow
     AVIF_AVAILABLE = True
 except ImportError:
     AVIF_AVAILABLE = False
 
-from PIL import Image
+from PIL import Image, ImageOps, features
+
+if not AVIF_AVAILABLE:
+    # Native AVIF support (Pillow 11.3+ compiled with libavif)
+    try:
+        AVIF_AVAILABLE = features.check("avif")
+    except Exception:
+        AVIF_AVAILABLE = False
+
+# ---------------------------------------------------------------------------
+# Safety: guard against decompression bombs (maliciously large images that
+# expand to gigabytes of RAM). Pillow's default (~178 MP) already raises an
+# error at 2x the limit; we keep the default but make the failure friendly
+# in convert_one instead of crashing the worker thread.
+# ---------------------------------------------------------------------------
+MAX_PIXELS = Image.MAX_IMAGE_PIXELS  # keep Pillow's safe default
 
 from core.exif_handler import load_exif
 from utils.file_utils import build_output_path, get_file_size
@@ -45,6 +61,9 @@ SPEED_LABELS = {
     "good":   6,
     "best":   8,
 }
+
+# Output formats supported by the engine
+OUTPUT_FORMATS = ("avif", "webp", "jpg", "png")
 
 
 @dataclass
@@ -68,7 +87,7 @@ class ConversionResult:
 
 
 class Converter:
-    """Converts PNG/JPG images to AVIF format."""
+    """Converts PNG/JPG/WebP/AVIF images to AVIF, WebP, JPG or PNG."""
 
     def __init__(self):
         if not AVIF_AVAILABLE:
@@ -92,14 +111,15 @@ class Converter:
         subsampling: str = "4:2:0",
         resize_cfg: dict | None = None,
         output_format: str = "avif",
+        suffix: str = "",
     ) -> ConversionResult:
         """
-        Convert a single image to AVIF.
+        Convert a single image.
 
         Parameters
         ----------
         input_path : str
-            Absolute path to the source PNG/JPG.
+            Absolute path to the source image.
         output_dir : str | None
             Destination directory. None → same directory as source.
         quality : int
@@ -111,18 +131,27 @@ class Converter:
         custom_meta: dict | None
             Custom metadata to inject into EXIF fields.
         speed : int
-            Encoding effort (0-9). 0-3 is slowest/best, 8-9 is fastest.
+            AVIF encoding effort (0-9). 0-3 is slowest/best, 8-9 is fastest.
         subsampling : str
             Chroma subsampling ("4:2:0" or "4:4:4").
         resize_cfg : dict | None
             {"enabled": bool, "width": int, "height": int}.
+        output_format : str
+            "avif", "webp", "jpg" or "png".
+        suffix : str
+            Optional filename suffix, e.g. "-opt" → photo-opt.avif.
         """
-        output_path = build_output_path(input_path, output_dir, output_format)
+        output_path = build_output_path(input_path, output_dir, output_format, suffix)
         original_size = get_file_size(input_path)
 
         try:
             with Image.open(input_path) as img:
-                # 1. Handle resizing if enabled
+                # 0. Apply EXIF orientation to the pixels so the output never
+                #    depends on viewers honouring the Orientation tag. The tag
+                #    itself is reset to 1 in load_exif().
+                img = ImageOps.exif_transpose(img)
+
+                # 1. Handle resizing if enabled (LANCZOS keeps sharpness).
                 if resize_cfg and resize_cfg.get("enabled"):
                     w, h = img.size
                     target_w = resize_cfg.get("width")
@@ -131,22 +160,22 @@ class Converter:
                     if target_w and target_w > 0:
                         # Proportional if only width or both provided
                         if not target_h or target_h <= 0:
-                            target_h = int(h * (target_w / w))
-                        
+                            target_h = max(1, round(h * (target_w / w)))
                         img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
                     elif target_h and target_h > 0:
                         # Proportional if only height provided
-                        target_w = int(w * (target_h / h))
+                        target_w = max(1, round(w * (target_h / h)))
                         img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
-                # 2. Normalise mode: AVIF supports RGB and RGBA; JPEG only RGB.
+                # 2. Normalise mode: AVIF/WebP support RGB and RGBA; JPEG only RGB.
                 #    Also handle palette images ("P") that may have transparency.
                 has_alpha = (
                     img.mode in ("RGBA", "LA", "PA")
                     or (img.mode == "P" and "transparency" in img.info)
                 )
 
-                if output_format.lower() in ("jpg", "jpeg"):
+                fmt = output_format.lower()
+                if fmt in ("jpg", "jpeg"):
                     # JPEG does not support alpha, paste onto white background
                     if has_alpha:
                         bg = Image.new("RGB", img.size, (255, 255, 255))
@@ -156,22 +185,34 @@ class Converter:
                         img = bg
                     elif img.mode != "RGB":
                         img = img.convert("RGB")
-                    
+
                     effective_subsampling = "4:2:0"  # default standard JPEG subsampling
                     save_kwargs: dict = {
                         "format": "JPEG",
                         "quality": quality,
+                        "optimize": True,      # extra Huffman-table optimization pass
+                        "progressive": True,   # progressive render = better perceived load
                     }
-                elif output_format.lower() == "png":
+                elif fmt == "png":
                     if img.mode not in ("RGB", "RGBA", "L", "LA"):
                         img = img.convert("RGBA" if has_alpha else "RGB")
-                    
+
                     effective_subsampling = ""
-                    save_kwargs: dict = {
+                    save_kwargs = {
                         "format": "PNG",
                         "optimize": True,
                     }
-                else:
+                elif fmt == "webp":
+                    if img.mode not in ("RGB", "RGBA"):
+                        img = img.convert("RGBA" if has_alpha else "RGB")
+
+                    effective_subsampling = ""
+                    save_kwargs = {
+                        "format": "WEBP",
+                        "quality": quality,
+                        "method": 6,           # slowest/best compression method
+                    }
+                else:  # avif
                     if img.mode not in ("RGB", "RGBA"):
                         img = img.convert("RGBA" if has_alpha else "RGB")
                         has_alpha = img.mode == "RGBA"  # re-check after conversion
@@ -181,7 +222,7 @@ class Converter:
                     # libavif builds and will silently drop the transparency.
                     effective_subsampling = "4:4:4" if has_alpha else subsampling
 
-                    save_kwargs: dict = {
+                    save_kwargs = {
                         "format": "AVIF",
                         "quality": quality,
                         "speed": speed,
@@ -203,7 +244,7 @@ class Converter:
 
                 # Write to a temp file first, then atomically replace.
                 dest_dir = str(pathlib.Path(output_path).parent)
-                tmp_suffix = f".{output_format.lower()}.tmp"
+                tmp_suffix = f".{fmt}.tmp"
                 fd, tmp_path = tempfile.mkstemp(suffix=tmp_suffix, dir=dest_dir)
                 try:
                     os.close(fd)
@@ -226,9 +267,19 @@ class Converter:
                 subsampling=effective_subsampling,
             )
 
+        except Image.DecompressionBombError:
+            return ConversionResult(
+                source_path=input_path,
+                output_path=output_path,
+                original_size=original_size,
+                converted_size=0,
+                success=False,
+                error="Imagen demasiado grande (posible decompression bomb)",
+            )
         except Exception as exc:
-            import traceback
-            traceback.print_exc()
+            import logging
+            from utils.logging_utils import log_exception
+            log_exception(logging.getLogger(__name__), "convert_one failed", exc)
             return ConversionResult(
                 source_path=input_path,
                 output_path=output_path,
@@ -239,7 +290,8 @@ class Converter:
             )
 
     # ------------------------------------------------------------------
-    # Batch (parallel using ProcessPoolExecutor)
+    # Batch (parallel using ThreadPoolExecutor — Pillow releases the GIL
+    # during encode, so threads scale well and share memory safely)
     # ------------------------------------------------------------------
     def convert_batch(
         self,
@@ -256,20 +308,21 @@ class Converter:
         progress_cb: Callable[[int, int, ConversionResult], None] | None = None,
         stop_event: threading.Event | None = None,
         output_format: str = "avif",
+        suffix: str = "",
     ) -> list[ConversionResult]:
         """
         Convert multiple images in parallel.
         """
         import concurrent.futures
-        import os
         import logging
 
         logger = logging.getLogger(__name__)
 
         results: list[ConversionResult] = []
         total = len(input_paths)
-        
-        workers = max_workers if max_workers is not None else (os.cpu_count() or 4)
+
+        workers = max_workers if max_workers and max_workers > 0 else (os.cpu_count() or 4)
+        workers = max(1, min(workers, total)) if total else 1
         logger.info("Starting batch conversion: %d files, %d workers", total, workers)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
@@ -278,7 +331,7 @@ class Converter:
             for path in input_paths:
                 if stop_event and stop_event.is_set():
                     break
-                
+
                 future = executor.submit(
                     self.convert_one,
                     path,
@@ -291,6 +344,7 @@ class Converter:
                     subsampling,
                     resize_cfg,
                     output_format,
+                    suffix,
                 )
                 futures[future] = path
 
@@ -299,27 +353,23 @@ class Converter:
                 if stop_event and stop_event.is_set():
                     executor.shutdown(wait=False, cancel_futures=True)
                     break
-                
+
                 try:
                     result = future.result()
                     results.append(result)
-                    logger.info("Converted %d/%d: %s → %s", idx, total, result.source_path, "OK" if result.success else result.error)
+                    logger.info(
+                        "Converted %d/%d: %s → %s",
+                        idx, total, os.path.basename(result.source_path),
+                        "OK" if result.success else result.error,
+                    )
                     if progress_cb:
                         progress_cb(idx, total, result)
                 except Exception as exc:
                     path = futures[future]
-                    logger.error("Conversion failed for %s: %s", path, exc)
+                    logger.error("Conversion failed for %s: %s", os.path.basename(path), exc)
                     res = ConversionResult(path, "", 0, 0, False, error=str(exc))
                     results.append(res)
                     if progress_cb:
                         progress_cb(idx, total, res)
 
         return results
-
-
-def _run_convert_one_wrapper(converter, *args, **kwargs):
-    """
-    Helper function to call convert_one inside a separate process.
-    ProcessPoolExecutor requires the target to be a top-level function.
-    """
-    return converter.convert_one(*args, **kwargs)

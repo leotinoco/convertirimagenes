@@ -16,6 +16,7 @@ import customtkinter as ctk
 from utils.file_utils import format_bytes, show_in_file_explorer
 from utils.i18n import I18N
 from utils.logging_utils import log_exception
+from utils import theme
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +37,12 @@ class HistoryPanel(ctk.CTkFrame):
         self.rowconfigure(1, weight=1)
 
         # ── Column headers ────────────────────────────────────────────
-        self._hdr_canvas = tk.Canvas(self, bg="#0d1520", highlightthickness=0, height=30)
+        self._hdr_canvas = tk.Canvas(self, bg=theme.CARD, highlightthickness=0, height=30)
         self._hdr_canvas.grid(row=0, column=0, sticky="ew", padx=4, pady=(8, 0))
         
         self._COL_WIDTHS = [280, 100, 70, 160, 90, 80, 90]
         
-        self._hdr_frame = ctk.CTkFrame(self._hdr_canvas, fg_color="#0d1520", corner_radius=0, height=30, width=sum(self._COL_WIDTHS))
+        self._hdr_frame = ctk.CTkFrame(self._hdr_canvas, fg_color=theme.CARD, corner_radius=0, height=30, width=sum(self._COL_WIDTHS))
         self._hdr_frame.pack_propagate(False)
         self._hdr_window = self._hdr_canvas.create_window((0, 0), window=self._hdr_frame, anchor="nw")
 
@@ -53,8 +54,8 @@ class HistoryPanel(ctk.CTkFrame):
             ctk.CTkLabel(
                 cell,
                 textvariable=I18N.tvar(self, key),
-                font=("Segoe UI Semibold", 11),
-                text_color="#6b7b8d",
+                font=theme.font(11, "bold"),
+                text_color=theme.TEXT_FAINT,
                 anchor="w",
             ).pack(side="left", padx=8, fill="x", expand=True)
 
@@ -64,7 +65,7 @@ class HistoryPanel(ctk.CTkFrame):
         self._canvas_container.rowconfigure(0, weight=1)
         self._canvas_container.columnconfigure(0, weight=1)
 
-        self._canvas = tk.Canvas(self._canvas_container, bg="#0f1a26", highlightthickness=0)
+        self._canvas = tk.Canvas(self._canvas_container, bg=theme.CARD, highlightthickness=0)
         self._canvas.grid(row=0, column=0, sticky="nsew")
 
         self._v_scroll = ctk.CTkScrollbar(self._canvas_container, orientation="vertical", command=self._canvas.yview)
@@ -83,7 +84,7 @@ class HistoryPanel(ctk.CTkFrame):
 
         self._canvas.configure(yscrollcommand=self._v_scroll.set, xscrollcommand=_sync_xscroll)
 
-        self._scroll = ctk.CTkFrame(self._canvas, fg_color="#0f1a26")
+        self._scroll = ctk.CTkFrame(self._canvas, fg_color=theme.CARD)
         self._canvas_window = self._canvas.create_window((0, 0), window=self._scroll, anchor="nw")
 
         def _on_frame_configure(event):
@@ -101,11 +102,13 @@ class HistoryPanel(ctk.CTkFrame):
             textvariable=I18N.tvar(bot, "hist_clear"),
             width=110,
             height=28,
-            font=("Segoe UI", 11),
+            font=theme.font(11),
             fg_color="transparent",
             border_width=1,
-            border_color="#2d4a7a",
-            hover_color="#1a2b4a",
+            border_color=theme.BORDER,
+            hover_color=theme.ACCENT_SOFT,
+            text_color=theme.ACCENT_TEXT,
+            corner_radius=theme.RADIUS_SM,
             command=self.clear,
         )
         self._clear_btn.pack(side="left")
@@ -114,8 +117,8 @@ class HistoryPanel(ctk.CTkFrame):
         self._count_lbl = ctk.CTkLabel(
             bot,
             textvariable=self._count_var,
-            font=("Segoe UI", 11),
-            text_color="#22c55e",
+            font=theme.font(11),
+            text_color=theme.SUCCESS,
         )
         self._count_lbl.pack(side="right")
 
@@ -168,7 +171,7 @@ class HistoryPanel(ctk.CTkFrame):
         """Build a single result row inside the scroll frame."""
         # Alternating background for readability
         idx = len(self._row_widgets)
-        bg = "#111e2e" if idx % 2 == 0 else "#0f1a26"
+        bg = theme.CARD_ALT if idx % 2 == 0 else theme.CARD
 
         row = ctk.CTkFrame(self._scroll, fg_color=bg, corner_radius=4, height=36, width=sum(self._COL_WIDTHS))
         row.pack(fill="x", padx=2, pady=1, expand=False)
@@ -186,21 +189,21 @@ class HistoryPanel(ctk.CTkFrame):
         cell0 = make_cell(0)
         fname = os.path.basename(entry["source"])
         ctk.CTkLabel(
-            cell0, text=fname, font=("Segoe UI", 11),
-            text_color="#d0d8e0", anchor="w",
+            cell0, text=fname, font=theme.font(11),
+            text_color=theme.TEXT, anchor="w",
         ).pack(side="left", padx=8, fill="x", expand=True)
 
         # 2) Status
         cell1 = make_cell(1)
         if entry["success"]:
             status_text = f"✔ {I18N.get('completed')}"
-            status_color = "#22c55e"
+            status_color = theme.SUCCESS
         else:
             status_text = f"✖ {I18N.get('error')}"
-            status_color = "#ef4444"
+            status_color = theme.DANGER
 
         ctk.CTkLabel(
-            cell1, text=status_text, font=("Segoe UI Semibold", 11),
+            cell1, text=status_text, font=theme.font(11, "bold"),
             text_color=status_color, anchor="w",
         ).pack(side="left", padx=4, fill="x", expand=True)
 
@@ -208,8 +211,8 @@ class HistoryPanel(ctk.CTkFrame):
         cell2 = make_cell(2)
         subsampling_text = entry.get("subsampling", "") or "—"
         ctk.CTkLabel(
-            cell2, text=subsampling_text, font=("Segoe UI", 11),
-            text_color="#a0b0c0", anchor="w",
+            cell2, text=subsampling_text, font=theme.font(11),
+            text_color=theme.TEXT_MUTED, anchor="w",
         ).pack(side="left", padx=4, fill="x", expand=True)
 
         # 3) Size (Before → After)
@@ -218,13 +221,13 @@ class HistoryPanel(ctk.CTkFrame):
             orig = format_bytes(entry["original_size"])
             conv = format_bytes(entry["converted_size"])
             size_text = f"{orig} → {conv}"
-            size_color = "#a0b0c0"
+            size_color = theme.TEXT_MUTED
         else:
             size_text = entry["error"][:30] if entry["error"] else "—"
-            size_color = "#ef4444"
+            size_color = theme.DANGER
 
         ctk.CTkLabel(
-            cell3, text=size_text, font=("Segoe UI", 11),
+            cell3, text=size_text, font=theme.font(11),
             text_color=size_color, anchor="w",
         ).pack(side="left", padx=4, fill="x", expand=True)
 
@@ -234,16 +237,16 @@ class HistoryPanel(ctk.CTkFrame):
             pct = entry["savings_pct"]
             if pct > 0:
                 saving_text = f"-{pct:.1f}%"
-                saving_color = "#22c55e"
+                saving_color = theme.SUCCESS
             else:
                 saving_text = f"+{abs(pct):.1f}%"
-                saving_color = "#ef4444"
+                saving_color = theme.DANGER
         else:
             saving_text = "—"
-            saving_color = "#6b7b8d"
+            saving_color = theme.TEXT_FAINT
 
         ctk.CTkLabel(
-            cell4, text=saving_text, font=("Segoe UI Semibold", 11),
+            cell4, text=saving_text, font=theme.font(11, "bold"),
             text_color=saving_color, anchor="w",
         ).pack(side="left", padx=4, fill="x", expand=True)
 
@@ -251,8 +254,8 @@ class HistoryPanel(ctk.CTkFrame):
         cell5 = make_cell(5)
         ts = time.strftime("%H:%M:%S", time.localtime(entry.get("timestamp", time.time())))
         ctk.CTkLabel(
-            cell5, text=ts, font=("Segoe UI", 11),
-            text_color="#6b7b8d", anchor="w",
+            cell5, text=ts, font=theme.font(11),
+            text_color=theme.TEXT_FAINT, anchor="w",
         ).pack(side="left", padx=4, fill="x", expand=True)
 
         # 6) Action
@@ -262,10 +265,10 @@ class HistoryPanel(ctk.CTkFrame):
             show_in_file_explorer(target)
 
         ctk.CTkButton(
-            cell6, text=I18N.get("hist_open_folder"), font=("Segoe UI", 11),
+            cell6, text=I18N.get("hist_open_folder"), font=theme.font(11),
             width=60, height=24,
-            fg_color="transparent", hover_color="#1a2b4a",
-            text_color="#3b82f6", anchor="center",
+            fg_color="transparent", hover_color=theme.ACCENT_SOFT,
+            text_color=theme.ACCENT_TEXT, anchor="center",
             command=_open_folder
         ).pack(side="right", padx=8)
 

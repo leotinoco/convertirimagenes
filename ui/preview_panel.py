@@ -12,6 +12,7 @@ from PIL import Image
 
 from utils.file_utils import format_bytes, get_file_size
 from utils.i18n import I18N
+from utils import theme
 
 PREVIEW_SIZE = (280, 210)  # max thumbnail size in pixels
 
@@ -30,14 +31,14 @@ class _PreviewPane(ctk.CTkFrame):
     """Single-side (before or after) preview pane."""
 
     def __init__(self, master, title_key: str, **kwargs):
-        super().__init__(master, fg_color="#111820", corner_radius=8, **kwargs)
+        super().__init__(master, fg_color=theme.CARD_ALT, corner_radius=theme.RADIUS_SM, **kwargs)
         self.columnconfigure(0, weight=1)
 
         title_lbl = ctk.CTkLabel(
             self,
             textvariable=I18N.tvar(self, title_key),
-            font=("Segoe UI Semibold", 12),
-            text_color="#6aadff",
+            font=theme.font(12, "bold"),
+            text_color=theme.ACCENT_TEXT,
         )
         title_lbl.grid(row=0, column=0, pady=(8, 4))
 
@@ -47,18 +48,18 @@ class _PreviewPane(ctk.CTkFrame):
             text="—",
             width=PREVIEW_SIZE[0],
             height=PREVIEW_SIZE[1],
-            fg_color="#0d1117",
+            fg_color=theme.BG,
             corner_radius=6,
-            font=("Segoe UI", 24),
-            text_color="#2a3a4a",
+            font=theme.font(24),
+            text_color=theme.TEXT_FAINT,
         )
         self._img_lbl.grid(row=1, column=0, padx=8, pady=4)
 
         self._meta_lbl = ctk.CTkLabel(
             self,
             text="",
-            font=("Segoe UI", 10),
-            text_color="gray",
+            font=theme.font(10),
+            text_color=theme.TEXT_MUTED,
         )
         self._meta_lbl.grid(row=2, column=0, pady=(2, 8))
 
@@ -95,7 +96,7 @@ class PreviewPanel(ctk.CTkFrame):
         lbl = ctk.CTkLabel(
             self,
             textvariable=I18N.tvar(self, "preview_hdr"),
-            font=("Segoe UI Semibold", 13),
+            font=theme.font(13, "bold"),
             anchor="w",
         )
         lbl.grid(row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(10, 6))

@@ -18,6 +18,7 @@ from utils.file_utils import is_valid_image, format_bytes, get_file_size
 from utils.i18n import I18N
 from utils.dnd_bootstrap import is_ready as dnd_is_ready, enable_dnd_on_widget
 from utils.dnd_utils import parse_drop_paths
+from utils import theme
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class FileRow(ctk.CTkFrame):
         self.columnconfigure(1, weight=1)
 
         # Icon label
-        icon = ctk.CTkLabel(self, text="🖼", width=24, font=("Segoe UI", 14))
+        icon = ctk.CTkLabel(self, text="🖼", width=24, font=theme.font(14))
         icon.grid(row=0, column=0, padx=(4, 8))
 
         # File name
@@ -44,7 +45,7 @@ class FileRow(ctk.CTkFrame):
             self,
             text=name,
             anchor="w",
-            font=("Segoe UI", 12),
+            font=theme.font(12),
             wraplength=280,
         )
         name_lbl.grid(row=0, column=1, sticky="ew")
@@ -54,8 +55,8 @@ class FileRow(ctk.CTkFrame):
             self,
             text=size,
             anchor="e",
-            font=("Segoe UI", 11),
-            text_color="gray",
+            font=theme.font(11),
+            text_color=theme.TEXT_MUTED,
             width=70,
         )
         size_lbl.grid(row=0, column=2, padx=(4, 4))
@@ -67,14 +68,14 @@ class FileRow(ctk.CTkFrame):
             width=24,
             height=24,
             fg_color="transparent",
-            hover_color="#3a3a3a",
+            hover_color=theme.DANGER_SOFT,
             command=self._remove,
-            font=("Segoe UI", 11),
+            font=theme.font(11),
         )
         rm_btn.grid(row=0, column=3, padx=(0, 4))
 
         # Subtle separator
-        sep = ctk.CTkFrame(self, height=1, fg_color="#2a2a2a")
+        sep = ctk.CTkFrame(self, height=1, fg_color=theme.BORDER)
         sep.grid(row=1, column=0, columnspan=4, sticky="ew", padx=4, pady=(4, 0))
 
     def _remove(self):
@@ -117,10 +118,10 @@ class DropZone(ctk.CTkFrame):
         # --- Drop area header ---
         self._header_frame = ctk.CTkFrame(
             self,
-            fg_color="#1a2332",
-            corner_radius=10,
+            fg_color=theme.CARD,
+            corner_radius=theme.RADIUS,
             border_width=2,
-            border_color="#2d4a7a",
+            border_color=theme.BORDER,
         )
         self._header_frame.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 6))
         self._header_frame.columnconfigure(0, weight=1)
@@ -129,16 +130,16 @@ class DropZone(ctk.CTkFrame):
         dnd_icon = ctk.CTkLabel(
             header,
             textvariable=I18N.tvar(header, "drop_title"),
-            font=("Segoe UI Semibold", 14),
-            text_color="#6aadff",
+            font=theme.font(14, "bold"),
+            text_color=theme.ACCENT_TEXT,
         )
         dnd_icon.grid(row=0, column=0, padx=12, pady=(10, 2))
 
         sub = ctk.CTkLabel(
             header,
             textvariable=I18N.tvar(header, "drop_sub"),
-            font=("Segoe UI", 11),
-            text_color="gray",
+            font=theme.font(11),
+            text_color=theme.TEXT_MUTED,
         )
         sub.grid(row=1, column=0, pady=(0, 4))
 
@@ -150,9 +151,10 @@ class DropZone(ctk.CTkFrame):
             textvariable=I18N.tvar(btn_row, "btn_browse"),
             width=160,
             height=34,
-            font=("Segoe UI Semibold", 12),
-            fg_color="#2d4a7a",
-            hover_color="#3a6abf",
+            font=theme.font(12, "bold"),
+            corner_radius=theme.RADIUS_SM,
+            fg_color=theme.ACCENT_SOFT,
+            hover_color=theme.ACCENT_HOVER,
             command=self._browse,
         )
         browse_btn.pack(side="left", padx=6)
@@ -162,9 +164,10 @@ class DropZone(ctk.CTkFrame):
             textvariable=I18N.tvar(btn_row, "btn_clear"),
             width=130,
             height=34,
-            font=("Segoe UI", 12),
-            fg_color="#3a1a1a",
-            hover_color="#5a2a2a",
+            font=theme.font(12),
+            corner_radius=theme.RADIUS_SM,
+            fg_color=theme.DANGER_SOFT,
+            hover_color=theme.DANGER_HOVER,
             command=self.clear_all,
         )
         clear_btn.pack(side="left", padx=6)
@@ -174,16 +177,16 @@ class DropZone(ctk.CTkFrame):
         count_lbl = ctk.CTkLabel(
             self,
             textvariable=self._count_var,
-            font=("Segoe UI", 11),
-            text_color="gray",
+            font=theme.font(11),
+            text_color=theme.TEXT_MUTED,
         )
         count_lbl.grid(row=1, column=0, sticky="w", padx=16, pady=(0, 2))
 
         # --- Scrollable file list ---
         self._list_frame = ctk.CTkScrollableFrame(
             self,
-            fg_color="#111820",
-            corner_radius=8,
+            fg_color=theme.CARD_ALT,
+            corner_radius=theme.RADIUS_SM,
             label_text="",
         )
         self._list_frame.grid(
@@ -212,14 +215,14 @@ class DropZone(ctk.CTkFrame):
     def _on_drag_enter(self, event):
         """Visual feedback: highlight border when dragging over."""
         try:
-            self._header_frame.configure(border_color="#6aadff")
+            self._header_frame.configure(border_color=theme.BORDER_HI)
         except Exception:
             pass
 
     def _on_drag_leave(self, event):
         """Restore border on drag leave."""
         try:
-            self._header_frame.configure(border_color="#2d4a7a")
+            self._header_frame.configure(border_color=theme.BORDER)
         except Exception:
             pass
 
@@ -258,7 +261,7 @@ class DropZone(ctk.CTkFrame):
 
         # Restore border in case <<DragLeave>> did not fire
         try:
-            self._header_frame.configure(border_color="#2d4a7a")
+            self._header_frame.configure(border_color=theme.BORDER)
         except Exception:
             pass
 
