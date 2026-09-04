@@ -34,27 +34,27 @@ _DICT = {
         "engine_nvenc": "GPU NVIDIA (experimental)",
         "engine_na_tag": " — no disponible",
         "desc_pillow": (
-            "✔ El más equilibrado y el predeterminado. Motor integrado, sin programas externos.\n"
-            "• Velocidad: la mejor. ~55 ms por imagen con esfuerzo «Ultra Rápido» (~18 img/s).\n"
-            "• Peso: 45.9 KB en una foto de 1200px (referencia).\n"
+            "✔ El más rápido y el predeterminado. Motor integrado, sin programas externos.\n"
+            "• Velocidad: 48 ms/img (~21 img/s) con esfuerzo «Ultra Rápido».\n"
+            "• Peso: 47.0 KB en una foto de 1200px (referencia).\n"
             "• Es el único que conserva EXIF/IPTC y transparencia.\n"
             "Úsalo salvo que necesites exprimir el peso al máximo."
         ),
         "desc_svtav1": (
-            "◆ El que produce los archivos más livianos, a costa de tiempo.\n"
-            "• Peso: ~20% menos que el estándar con la MISMA calidad visual\n"
-            "   (36.9 KB vs 45.9 KB medidos a igual SSIM).\n"
-            "• Velocidad: ~8x más lento por imagen que «Ultra Rápido».\n"
+            "◆ El que produce los archivos más livianos.\n"
+            "• Peso: 36.8 KB frente a 45.6 KB del estándar a igual calidad (−19%).\n"
+            "• Velocidad: 198 ms/img (~5 img/s). Más rápido que el esfuerzo\n"
+            "   «Equilibrado», más lento que «Ultra Rápido».\n"
             "• No conserva EXIF/IPTC; las imágenes con transparencia usan el estándar.\n"
-            "Elígelo cuando el peso de la página importe más que el tiempo de conversión."
+            "Elígelo cuando el peso de la página importe más que el tiempo."
         ),
         "desc_nvenc": (
             "⚠ Experimental. Codificador AV1 por hardware de tu tarjeta NVIDIA.\n"
-            "• Velocidad: resultó MÁS LENTO que la CPU (~4 img/s vs ~18 img/s).\n"
-            "   Preparar la GPU cuesta más que comprimir una imagen pequeña.\n"
-            "• Peso: sin ventaja frente al estándar a igual calidad.\n"
+            "• Velocidad: 167 ms/img (~6 img/s). Supera al esfuerzo «Equilibrado»,\n"
+            "   pero el estándar en «Ultra Rápido» sigue siendo ~3.5x más rápido.\n"
+            "• Peso: 42.4 KB, entre el estándar y SVT-AV1.\n"
             "• No conserva EXIF/IPTC; las imágenes con transparencia usan el estándar.\n"
-            "No se recomienda para lotes; está aquí para comparar."
+            "Útil si la CPU está saturada; para peso mínimo usa SVT-AV1."
         ),
         "engine_needs_ffmpeg": (
             "⚠ Requiere ffmpeg instalado y accesible en el PATH.\n"
@@ -155,27 +155,27 @@ _DICT = {
         "engine_nvenc": "NVIDIA GPU (experimental)",
         "engine_na_tag": " — unavailable",
         "desc_pillow": (
-            "✔ The most balanced option and the default. Built in, no external programs.\n"
-            "• Speed: the best. ~55 ms per image on «Ultra Fast» effort (~18 img/s).\n"
-            "• Size: 45.9 KB on a 1200px photo (baseline).\n"
+            "✔ The fastest option and the default. Built in, no external programs.\n"
+            "• Speed: 48 ms/img (~21 img/s) on «Ultra Fast» effort.\n"
+            "• Size: 47.0 KB on a 1200px photo (baseline).\n"
             "• The only one that preserves EXIF/IPTC and transparency.\n"
             "Use it unless you need to squeeze out every last byte."
         ),
         "desc_svtav1": (
-            "◆ Produces the smallest files, at the cost of time.\n"
-            "• Size: ~20% smaller than standard at the SAME visual quality\n"
-            "   (36.9 KB vs 45.9 KB measured at equal SSIM).\n"
-            "• Speed: ~8x slower per image than «Ultra Fast».\n"
+            "◆ Produces the smallest files.\n"
+            "• Size: 36.8 KB vs 45.6 KB for standard at equal quality (−19%).\n"
+            "• Speed: 198 ms/img (~5 img/s). Faster than «Balanced» effort,\n"
+            "   slower than «Ultra Fast».\n"
             "• Drops EXIF/IPTC; images with transparency use the standard engine.\n"
             "Pick it when page weight matters more than conversion time."
         ),
         "desc_nvenc": (
             "⚠ Experimental. Hardware AV1 encoder on your NVIDIA card.\n"
-            "• Speed: measured SLOWER than the CPU (~4 img/s vs ~18 img/s).\n"
-            "   Setting up the GPU costs more than encoding one small image.\n"
-            "• Size: no advantage over standard at equal quality.\n"
+            "• Speed: 167 ms/img (~6 img/s). Beats «Balanced» effort, but the\n"
+            "   standard engine on «Ultra Fast» is still ~3.5x faster.\n"
+            "• Size: 42.4 KB, between standard and SVT-AV1.\n"
             "• Drops EXIF/IPTC; images with transparency use the standard engine.\n"
-            "Not recommended for batches; included for comparison."
+            "Useful when the CPU is saturated; for minimum size use SVT-AV1."
         ),
         "engine_needs_ffmpeg": (
             "⚠ Requires ffmpeg installed and on the PATH.\n"

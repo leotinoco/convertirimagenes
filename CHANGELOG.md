@@ -1,18 +1,28 @@
 # Changelog
 
+Todas las novedades relevantes de este proyecto serán documentadas en este archivo.
+
+El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
+y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
+
 ## [1.5.0] - 2026-09-04
 
 ### Añadido
-- ✨ **Motor de codificación seleccionable (solo AVIF)**: Nueva tarjeta que permite elegir entre tres codificadores, con el motor estándar siempre como predeterminado.
-  - **Estándar (CPU)** — motor integrado (libaom). El más rápido (~55 ms/img con «Ultra Rápido», ~18 img/s) y el único que conserva EXIF/IPTC y transparencia.
-  - **Máxima compresión (SVT-AV1)** — archivos **~20% más livianos a igual calidad visual** (36.9 KB vs 45.9 KB medidos a igual SSIM), a cambio de ser ~8x más lento por imagen.
-  - **GPU NVIDIA (experimental)** — codificador AV1 por hardware. Medido **más lento** que la CPU (~4 img/s vs ~18 img/s) porque inicializar la sesión CUDA/NVENC cuesta más que comprimir una imagen pequeña, y sin ventaja de peso. Se incluye para comparar.
+- ✨ **Motor de codificación seleccionable (solo AVIF)**: Nueva tarjeta que permite elegir entre tres codificadores, con el motor estándar siempre como predeterminado. Cifras medidas sobre fotos de 4000×3000 redimensionadas a 1200px, con 16 hilos:
+  - **Estándar (CPU)** — motor integrado (libaom). El más rápido (48 ms/img, ~21 img/s con «Ultra Rápido») y el único que conserva EXIF/IPTC y transparencia.
+  - **Máxima compresión (SVT-AV1)** — archivos **19% más livianos a igual calidad visual** (36.8 KB vs 45.6 KB a igual SSIM), a 198 ms/img (~5 img/s).
+  - **GPU NVIDIA (experimental)** — codificador AV1 por hardware. 167 ms/img (~6 img/s) y 42.4 KB: supera al esfuerzo «Equilibrado», pero el motor estándar en «Ultra Rápido» sigue siendo ~3.5x más rápido, porque inicializar la sesión CUDA/NVENC cuesta más que comprimir una imagen pequeña.
 - ✨ **Descripciones comparativas en la interfaz**: Cada motor muestra qué hace, qué resultado da (velocidad y peso con cifras reales) y cuándo conviene frente a los otros. Se avisa si falta ffmpeg o si el formato elegido no es AVIF.
 
 ### Mejorado
 - ⚡ **Detección automática de ffmpeg**: Los motores externos se habilitan solos si ffmpeg está en el PATH; si no, aparecen marcados como no disponibles.
 - 🛡️ **Retroceso seguro**: Si un motor externo falla, la imagen tiene transparencia o el formato no es AVIF, la conversión usa el motor estándar sin interrumpir el lote. `ConversionResult.engine` registra cuál se usó realmente.
 - 🐛 **Sin ventanas emergentes**: Las llamadas a ffmpeg se lanzan con `CREATE_NO_WINDOW` en Windows para que no parpadee una consola por cada imagen.
+
+### Documentación
+- 📚 **Comparativa de métodos de conversión**: Nueva sección del README con mediciones reales (tiempo, peso, reducción y calidad SSIM) de cada formato de salida, nivel de calidad, esfuerzo de compresión y motor, con recomendaciones de cuándo usar cada uno.
+- 📚 **CHANGELOG saneado**: Recuperada la nota introductoria que había quedado extraviada a mitad del archivo, añadida la referencia al formato *Keep a Changelog* / *Versionado Semántico*, y unificadas las dos secciones duplicadas que compartían el número `1.2.0`.
+- 📚 **Pruebas**: Corregida la documentación de la suite, que se ejecuta con `unittest` (sin dependencias extra) y no requiere pytest.
 
 ## [1.4.0] - 2026-08-05
 
@@ -61,22 +71,14 @@
 ## [1.2.0] - 2026-06-21
 
 ### Añadido
-- agrega soporte para formato PNG y ajusta la UI
-- agrega opcion de conversion a JPG
-
-### Documentación
-- actualiza documentacion y excluye .agents
-
-Todas las novedades relevantes de este proyecto serán documentadas en este archivo.
-
-## [1.2.0] - 2026-06-06
-
-### Añadido
+- ✨ **Formato PNG**: Agregado soporte para salida PNG y ajustes de la interfaz para acomodarlo.
 - ✨ **Conversión a JPG**: Agregada la opción de convertir archivos `.avif` y `.webp` a formato `.jpg`.
-- ✨ **Selector de formato**: Integrado un control segmentado en la interfaz para alternar dinámicamente entre formatos de salida (`AVIF` y `JPG`).
+- ✨ **Selector de formato**: Integrado un control segmentado en la interfaz para alternar dinámicamente entre formatos de salida.
 - ⚙️ **Aplanado de transparencia**: Fusión automática del canal alfa sobre un fondo blanco sólido al guardar en JPEG para evitar errores de codificación.
 - 🛡️ **Prevención de colisiones**: Generación de nombres de archivo no destructivos (ej. `nombre_converted.jpg`) cuando se intenta convertir al mismo formato.
 
+### Documentación
+- 📚 Actualización de la documentación y exclusión de `.agents` del repositorio.
 
 ## [1.1.0] - 2026-04-13
 

@@ -18,7 +18,8 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 - Convierte cientos de imágenes en un solo lote usando todos los núcleos del CPU.
 - Genera AVIF y WebP, los formatos con mejor compresión soportados por los navegadores modernos.
 - Muestra el ahorro de peso por archivo y el ahorro total del lote.
-- Redimensiona, renombra con sufijo y organiza la salida en la carpeta que elijas.
+- Redimensiona a un ancho fijo y genera de una sola pasada las versiones de escritorio y móvil (ej. 1200px y 800px), con nombres diferenciados automáticamente.
+- Renombra con sufijo y organiza la salida en la carpeta que elijas.
 - Preserva o edita los metadatos (EXIF/IPTC) según lo necesites: mantener el copyright del cliente o limpiar datos innecesarios.
 
 ---
@@ -45,6 +46,71 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 | **Multilingüe** | Español e Inglés con conmutación en caliente (conserva tus selecciones al cambiar). |
 | **Interfaz moderna** | Tema oscuro centralizado (`utils/theme.py`) con tipografía adaptada a cada sistema operativo. |
 | **Limpieza de originales** | Botón para eliminar los archivos originales tras una conversión 100% exitosa (con confirmación). |
+
+---
+
+## 📊 Comparativa de métodos de conversión
+
+Todas las cifras son **medidas reales**, no estimaciones. Metodología: 12 fotografías de 4000×3000 (JPG de **1171 KB** cada una) redimensionadas a **1200px de ancho**, con 16 hilos, en un Ryzen 7 3700X + RTX 5070. La calidad se mide con **SSIM** contra la imagen sin comprimir: 1.0000 sería idéntica, y por encima de ~0.95 la diferencia no se aprecia a simple vista en pantalla.
+
+### Resumen: mismo resultado visual, distinto coste
+
+Estas cinco filas producen prácticamente **la misma calidad** (SSIM ≈ 0.95). Lo que cambia es el peso y el tiempo:
+
+| Método | Peso | Reducción | Tiempo | Velocidad | Calidad |
+|---|---|---|---|---|---|
+| **AVIF · SVT-AV1** | **36.8 KB** 🥇 | 96.9% | 198 ms | ~5 img/s | 0.9514 |
+| AVIF · GPU NVENC | 42.4 KB | 96.4% | 167 ms | ~6 img/s | 0.9533 |
+| AVIF · Estándar, esfuerzo Lento | 45.1 KB | 96.1% | 1279 ms | ~0.8 img/s | 0.9527 |
+| AVIF · Estándar, esfuerzo Equilibrado | 45.6 KB | 96.1% | 251 ms | ~4 img/s | 0.9515 |
+| **AVIF · Estándar, Ultra Rápido** | 47.0 KB | 96.0% | **48 ms** 🥇 | **~21 img/s** | 0.9491 |
+| JPG q75 *(referencia)* | 97.7 KB | 91.7% | 39 ms | ~26 img/s | 0.9558 |
+
+> **Lectura rápida:** AVIF pesa **menos de la mitad que JPG** con la misma calidad. Dentro de AVIF, «Ultra Rápido» es **26x más rápido** que «Lento» y solo pesa 2 KB más — el esfuerzo alto casi no compensa. Si quieres el mínimo peso posible, SVT-AV1 quita otro 19%.
+
+### Efecto del esfuerzo de compresión (AVIF, calidad 60)
+
+| Esfuerzo | Tiempo | Peso | Calidad |
+|---|---|---|---|
+| Lento (2) | 1279 ms | 45.1 KB | 0.9527 |
+| Equilibrado (5) | 251 ms | 45.6 KB | 0.9515 |
+| **Ultra Rápido (8)** | **48 ms** | 47.0 KB | 0.9491 |
+
+Subir el esfuerzo multiplica el tiempo por 26 para ahorrar un 4% de peso. **Para lotes grandes, «Ultra Rápido» es casi siempre la elección correcta.**
+
+### Efecto de la calidad (AVIF, esfuerzo Equilibrado)
+
+| Calidad | Peso | Reducción | Calidad visual | Notas |
+|---|---|---|---|---|
+| 45 | 17.2 KB | 98.5% | 0.8986 | Artefactos visibles en degradados y cielos |
+| **60** *(recomendado)* | 45.6 KB | 96.1% | 0.9515 | Punto dulce para web |
+| 75 | 78.2 KB | 93.3% | 0.9737 | Para fotografía destacada o hero images |
+
+### Comparativa entre formatos de salida
+
+| Formato | Config | Peso | Reducción | Tiempo | Calidad | Cuándo usarlo |
+|---|---|---|---|---|---|---|
+| **AVIF** | q60 | **45.6 KB** | 96.1% | 251 ms | 0.9515 | Formato principal. La mejor compresión. |
+| **WebP** | q75 | 53.6 KB | 95.4% | 74 ms | 0.9446 | Respaldo para navegadores sin AVIF. |
+| WebP | q60 | 38.9 KB | 96.7% | 101 ms | 0.9286 | Calidad ya algo justa. |
+| **JPG** | q75 | 97.7 KB | 91.7% | 39 ms | 0.9558 | Compatibilidad universal. |
+| JPG | q85 | 136.7 KB | 88.3% | 51 ms | 0.9676 | Cuando no puedes usar formatos modernos. |
+| **PNG** | sin pérdida | 1301.3 KB | **+11% MAYOR** | 132 ms | 0.9933 | Solo logos y gráficos de tintas planas. |
+
+> ⚠️ **PNG no sirve para fotografías**: al ser sin pérdida, el resultado pesó *más que el JPG original*. Úsalo solo para logotipos, iconos y capturas con texto.
+
+### Los tres motores de codificación AVIF
+
+| | Estándar (CPU) | SVT-AV1 | GPU NVIDIA |
+|---|---|---|---|
+| **Velocidad** | 🥇 48 ms (Ultra Rápido) | 198 ms | 167 ms |
+| **Peso** | 47.0 KB | 🥇 36.8 KB | 42.4 KB |
+| **Conserva EXIF/IPTC** | ✅ Sí | ❌ No | ❌ No |
+| **Soporta transparencia** | ✅ Sí | ❌ Usa el estándar | ❌ Usa el estándar |
+| **Requiere ffmpeg** | No | Sí | Sí + GPU NVIDIA |
+| **Ideal para** | El día a día | Peso mínimo | CPU saturada |
+
+**Sobre la GPU:** el codificador AV1 por hardware funciona, pero no es la bala de plata que parece. Codificar una imagen de 1200px son milisegundos; lo caro es inicializar la sesión CUDA/NVENC, y eso se paga en cada imagen. Termina siendo más rápido que el esfuerzo «Equilibrado» pero **~3.5x más lento que el motor estándar en «Ultra Rápido»**. Los codificadores por hardware están pensados para video, donde ese arranque se amortiza entre miles de fotogramas.
 
 ---
 
@@ -115,7 +181,7 @@ convertirimagenes/
 │   ├── dnd_utils.py        # Normalización multiplataforma del Drag & Drop
 │   ├── dnd_bootstrap.py    # Carga diferida y segura de TkinterDnD2
 │   └── logging_utils.py    # Logs sanitizados (sin rutas absolutas en producción)
-└── tests/                  # Suite de pruebas (pytest) del motor y utilidades
+└── tests/                  # Suite de pruebas (unittest) del motor y utilidades
 ```
 
 Detalles técnicos relevantes:
@@ -147,11 +213,13 @@ Resumen de la última actualización (detalle completo en [CHANGELOG.md](CHANGEL
 
   | Motor | Velocidad | Peso (foto 1200px) | Cuándo usarlo |
   |---|---|---|---|
-  | **Estándar (CPU)** *(predeterminado)* | **~18 img/s** | 45.9 KB | Casi siempre. Único que conserva EXIF y transparencia. |
-  | **SVT-AV1** | ~2 img/s | **36.9 KB (−20%)** | Cuando el peso importa más que el tiempo. |
-  | **GPU NVIDIA** *(experimental)* | ~4 img/s | ~45 KB | Solo para comparar; resultó más lento que la CPU. |
+  | **Estándar (CPU)** *(predeterminado)* | **~21 img/s** | 47.0 KB | Casi siempre. Único que conserva EXIF y transparencia. |
+  | **SVT-AV1** | ~5 img/s | **36.8 KB (−19%)** | Cuando el peso importa más que el tiempo. |
+  | **GPU NVIDIA** *(experimental)* | ~6 img/s | 42.4 KB | Si la CPU está saturada. |
 
-  Los motores externos requieren **ffmpeg** en el PATH; si falta, la app lo detecta y sigue usando el estándar sin fallar.
+  Los motores externos requieren **ffmpeg** en el PATH; si falta, la app lo detecta y sigue usando el estándar sin fallar. Ver la [comparativa completa](#-comparativa-de-métodos-de-conversión) con todas las mediciones.
+
+- **Comparativa de métodos documentada**: nueva sección del README con tiempos, pesos y calidad (SSIM) medidos para cada formato, nivel de calidad, esfuerzo y motor.
 
 ### Versión 1.4.0
 
@@ -165,12 +233,15 @@ Resumen de la última actualización (detalle completo en [CHANGELOG.md](CHANGEL
 
 ## 🧪 Pruebas
 
+La suite usa `unittest`, así que no necesita dependencias extra:
+
 ```bash
-pip install pytest
-python -m pytest tests/ -q
+python -m unittest discover -s tests -v
 ```
 
-La suite cubre el motor de conversión (AVIF/WebP/JPG, transparencia, presets, sufijos), la validación de disco y el parser de Drag & Drop.
+También funciona con pytest si lo prefieres (`pip install pytest && python -m pytest tests/ -q`).
+
+La suite cubre el motor de conversión (AVIF/WebP/JPG/PNG, transparencia, presets, sufijos), el redimensionado de ancho fijo y las variantes múltiples por archivo, la selección y el retroceso de los motores de codificación, la validación de disco y el parser de Drag & Drop. Las pruebas de los motores externos se saltan solas si ffmpeg no está instalado.
 
 ---
 
