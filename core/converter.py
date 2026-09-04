@@ -309,26 +309,46 @@ class Converter:
         stop_event: threading.Event | None = None,
         output_format: str = "avif",
         suffix: str = "",
+        variants: list[dict] | None = None,
     ) -> list[ConversionResult]:
         """
         Convert multiple images in parallel.
+
+        variants : list[dict] | None
+            Optional list of output variants, each
+            {"resize_cfg": dict | None, "suffix": str}. Every input file is
+            converted once per variant (e.g. a 1200px desktop version and an
+            800px mobile version in a single batch). When None, each file is
+            converted once using *resize_cfg* / *suffix*.
         """
         import concurrent.futures
         import logging
 
         logger = logging.getLogger(__name__)
 
+        if variants:
+            jobs = [
+                (path, v.get("resize_cfg", resize_cfg), v.get("suffix", suffix))
+                for path in input_paths
+                for v in variants
+            ]
+        else:
+            jobs = [(path, resize_cfg, suffix) for path in input_paths]
+
         results: list[ConversionResult] = []
-        total = len(input_paths)
+        total = len(jobs)
 
         workers = max_workers if max_workers and max_workers > 0 else (os.cpu_count() or 4)
         workers = max(1, min(workers, total)) if total else 1
-        logger.info("Starting batch conversion: %d files, %d workers", total, workers)
+        logger.info(
+            "Starting batch conversion: %d files, %d outputs, %d workers",
+            len(input_paths), total, workers,
+        )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             # Prepare tasks
             futures = {}
-            for path in input_paths:
+            for path, job_resize_cfg, job_suffix in jobs:
                 if stop_event and stop_event.is_set():
                     break
 
@@ -342,9 +362,9 @@ class Converter:
                     custom_meta,
                     speed,
                     subsampling,
-                    resize_cfg,
+                    job_resize_cfg,
                     output_format,
-                    suffix,
+                    job_suffix,
                 )
                 futures[future] = path
 

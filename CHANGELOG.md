@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0] - 2026-08-05
+
+### Añadido
+- ✨ **Ancho fijo con alto automático**: Nuevo modo de redimensionado "Ancho fijo" que ajusta el alto proporcionalmente **por cada imagen**, sin distorsión (ideal para estandarizar lotes a 1200px de ancho).
+- ✨ **Doble conversión (escritorio + móvil)**: Opción de generar dos versiones por imagen en un solo lote (ej. 1200px para PC y 800px para móvil), aplicada de forma masiva a todos los archivos. El campo de ancho móvil siempre está editable y escribir un valor activa la segunda versión automáticamente (borrarlo la desactiva).
+- ✨ **Sufijo automático de píxeles**: Los archivos de salida reciben `_1200px` / `_800px` según el ancho (ej. `fotografia40.jpg` → `fotografia40_1200px.avif`), combinable con el sufijo personalizado. En doble conversión se aplica siempre para evitar colisiones de nombres.
+- ✨ **Vista previa del nombre de salida**: Ejemplo en vivo del nombre resultante según el archivo cargado, formato, sufijos y anchos elegidos.
+
+### Mejorado
+- ⚡ **Progreso por salida**: La barra de progreso y el resumen cuentan cada archivo generado (archivos × versiones).
+- 🛡️ **Eliminar originales con variantes**: El botón de eliminar originales solo se habilita cuando **todas** las versiones de cada imagen se convirtieron con éxito.
+
 ## [1.3.0] - 2026-07-17
 
 ### Añadido

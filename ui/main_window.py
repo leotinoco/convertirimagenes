@@ -26,7 +26,7 @@ from ui.drop_zone import DropZone
 from ui.preview_panel import PreviewPanel
 from ui.history_panel import HistoryPanel
 from ui.metadata_modal import MetadataModal
-from utils.file_utils import format_bytes
+from utils.file_utils import format_bytes, sanitize_suffix
 from utils.i18n import I18N
 from utils import theme
 
@@ -61,6 +61,10 @@ class MainWindow(ctk.CTk):
         self._batch_saved_bytes = 0
         self._batch_ok = 0
         self._batch_total = 0
+        # With size variants each source produces N outputs; originals are only
+        # safe to delete when every variant of that source succeeded.
+        self._variant_count = 1
+        self._source_ok_counts: dict[str, int] = {}
 
         # Try to initialise converter (may fail if plugin missing)
         try:
@@ -164,6 +168,14 @@ class MainWindow(ctk.CTk):
 
         self._subsampling_menu.configure(values=[I18N.get("sub_420"), I18N.get("sub_444")])
         self._subsampling_menu.set(I18N.get("sub_444") if prev_sub_444 else I18N.get("sub_420"))
+
+        self._resize_mode_btn.configure(
+            values=[I18N.get("resize_mode_fixed"), I18N.get("resize_mode_custom")])
+        self._resize_mode_btn.set(
+            I18N.get("resize_mode_custom") if self._resize_mode == "custom"
+            else I18N.get("resize_mode_fixed"))
+
+        self._update_name_preview()
         self._update_output_dir_label()
         self._set_status_idle()
 
@@ -392,6 +404,7 @@ class MainWindow(ctk.CTk):
             fg_color=theme.CARD_ALT, border_color=theme.BORDER, corner_radius=theme.RADIUS_SM,
         )
         self._suffix_entry.grid(row=4, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 12))
+        self._suffix_entry.bind("<KeyRelease>", lambda e: self._update_name_preview())
 
         # 4. Resizing Options
         res_frame = self._card(mid, "resize_hdr")
@@ -407,25 +420,96 @@ class MainWindow(ctk.CTk):
         )
         self._resize_sw.grid(row=1, column=1, sticky="e", padx=14, pady=(0, 2))
 
-        wh_frame = ctk.CTkFrame(res_frame, fg_color="transparent")
-        wh_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 12))
-        wh_frame.columnconfigure((0, 1), weight=1)
+        # Mode: fixed width (proportional height per image) vs custom W×H
+        self._resize_mode = "fixed"
+        self._resize_mode_btn = ctk.CTkSegmentedButton(
+            res_frame,
+            values=[I18N.get("resize_mode_fixed"), I18N.get("resize_mode_custom")],
+            command=self._on_resize_mode_changed,
+            font=theme.font(11),
+            fg_color=theme.CARD_ALT,
+            selected_color=theme.ACCENT,
+            selected_hover_color=theme.ACCENT_HOVER,
+            unselected_color=theme.CARD_ALT,
+        )
+        self._resize_mode_btn.set(I18N.get("resize_mode_fixed"))
+        self._resize_mode_btn.grid(row=2, column=0, columnspan=2, sticky="ew", padx=14, pady=(4, 8))
 
-        ctk.CTkLabel(wh_frame, textvariable=I18N.tvar(wh_frame, "width"),
+        # --- Fixed-width mode: one or two target widths, height auto ---
+        self._fixed_frame = ctk.CTkFrame(res_frame, fg_color="transparent")
+        self._fixed_frame.grid(row=3, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 12))
+        self._fixed_frame.columnconfigure((0, 1), weight=1)
+
+        ctk.CTkLabel(self._fixed_frame, textvariable=I18N.tvar(self._fixed_frame, "fixed_w1_lbl"),
                      font=theme.font(11), text_color=theme.TEXT_MUTED).grid(row=0, column=0, sticky="w")
-        self._resize_w = ctk.CTkEntry(wh_frame, placeholder_text="1920", height=30,
+        self._fixed_w1 = ctk.CTkEntry(self._fixed_frame, placeholder_text="1200", height=30,
+                                      fg_color=theme.CARD_ALT, border_color=theme.BORDER,
+                                      corner_radius=theme.RADIUS_SM)
+        self._fixed_w1.insert(0, "1200")
+        self._fixed_w1.grid(row=1, column=0, sticky="ew", padx=(0, 5))
+        self._fixed_w1.bind("<KeyRelease>", lambda e: self._update_name_preview())
+
+        ctk.CTkLabel(self._fixed_frame, textvariable=I18N.tvar(self._fixed_frame, "fixed_w2_lbl"),
+                     font=theme.font(11), text_color=theme.TEXT_MUTED).grid(row=0, column=1, sticky="w")
+        self._fixed_w2 = ctk.CTkEntry(self._fixed_frame, placeholder_text="800", height=30,
+                                      fg_color=theme.CARD_ALT, border_color=theme.BORDER,
+                                      corner_radius=theme.RADIUS_SM)
+        self._fixed_w2.insert(0, "800")
+        self._fixed_w2.grid(row=1, column=1, sticky="ew", padx=(5, 0))
+        self._fixed_w2.bind("<KeyRelease>", self._on_mobile_width_typed)
+
+        self._dual_var = tk.BooleanVar(value=False)
+        ctk.CTkLabel(self._fixed_frame, textvariable=I18N.tvar(self._fixed_frame, "dual_enable"),
+                     font=theme.font(12), text_color=theme.TEXT).grid(
+            row=2, column=0, sticky="w", pady=(8, 0))
+        self._dual_sw = ctk.CTkSwitch(
+            self._fixed_frame, text="", variable=self._dual_var,
+            command=self._refresh_resize_states, progress_color=theme.ACCENT,
+        )
+        self._dual_sw.grid(row=2, column=1, sticky="e", pady=(8, 0))
+
+        self._auto_suffix_var = tk.BooleanVar(value=True)
+        ctk.CTkLabel(self._fixed_frame, textvariable=I18N.tvar(self._fixed_frame, "auto_px_suffix"),
+                     font=theme.font(12), text_color=theme.TEXT).grid(
+            row=3, column=0, sticky="w", pady=(4, 0))
+        self._auto_suffix_sw = ctk.CTkSwitch(
+            self._fixed_frame, text="", variable=self._auto_suffix_var,
+            command=self._update_name_preview, progress_color=theme.ACCENT,
+        )
+        self._auto_suffix_sw.grid(row=3, column=1, sticky="e", pady=(4, 0))
+
+        ctk.CTkLabel(self._fixed_frame, textvariable=I18N.tvar(self._fixed_frame, "fixed_note"),
+                     font=theme.font(10), text_color=theme.TEXT_FAINT).grid(
+            row=4, column=0, columnspan=2, sticky="w", pady=(4, 0))
+
+        self._name_preview_var = tk.StringVar(value="")
+        ctk.CTkLabel(self._fixed_frame, textvariable=self._name_preview_var,
+                     font=theme.font(10), text_color=theme.ACCENT_TEXT,
+                     anchor="w", justify="left", wraplength=330).grid(
+            row=5, column=0, columnspan=2, sticky="w", pady=(2, 0))
+
+        # --- Custom W×H mode (may distort if both are forced) ---
+        self._wh_frame = ctk.CTkFrame(res_frame, fg_color="transparent")
+        self._wh_frame.grid(row=4, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 12))
+        self._wh_frame.columnconfigure((0, 1), weight=1)
+
+        ctk.CTkLabel(self._wh_frame, textvariable=I18N.tvar(self._wh_frame, "width"),
+                     font=theme.font(11), text_color=theme.TEXT_MUTED).grid(row=0, column=0, sticky="w")
+        self._resize_w = ctk.CTkEntry(self._wh_frame, placeholder_text="1920", height=30,
                                       fg_color=theme.CARD_ALT, border_color=theme.BORDER,
                                       corner_radius=theme.RADIUS_SM)
         self._resize_w.grid(row=1, column=0, sticky="ew", padx=(0, 5))
         self._resize_w.bind("<KeyRelease>", self._on_width_changed)
 
-        ctk.CTkLabel(wh_frame, textvariable=I18N.tvar(wh_frame, "height"),
+        ctk.CTkLabel(self._wh_frame, textvariable=I18N.tvar(self._wh_frame, "height"),
                      font=theme.font(11), text_color=theme.TEXT_MUTED).grid(row=0, column=1, sticky="w")
-        self._resize_h = ctk.CTkEntry(wh_frame, placeholder_text="1080", height=30,
+        self._resize_h = ctk.CTkEntry(self._wh_frame, placeholder_text="1080", height=30,
                                       fg_color=theme.CARD_ALT, border_color=theme.BORDER,
                                       corner_radius=theme.RADIUS_SM)
         self._resize_h.grid(row=1, column=1, sticky="ew", padx=(5, 0))
         self._resize_h.bind("<KeyRelease>", self._on_height_changed)
+
+        self._wh_frame.grid_remove()  # fixed-width mode is the default
 
         # 5. Metadata
         meta_frame = self._card(mid, "meta_hdr")
@@ -489,14 +573,87 @@ class MainWindow(ctk.CTk):
     # Event handlers
     # ==================================================================
     def _on_resize_toggle(self):
+        self._refresh_resize_states()
+
+    def _on_resize_mode_changed(self, value=None):
+        is_custom = value == I18N.get("resize_mode_custom")
+        self._resize_mode = "custom" if is_custom else "fixed"
+        if is_custom:
+            self._fixed_frame.grid_remove()
+            self._wh_frame.grid()
+        else:
+            self._wh_frame.grid_remove()
+            self._fixed_frame.grid()
+        self._refresh_resize_states()
+
+    def _refresh_resize_states(self):
         is_on = self._resize_var.get()
-        state = "normal" if is_on else "disabled"
-        self._resize_w.configure(state=state)
-        self._resize_h.configure(state=state)
+        base = "normal" if is_on else "disabled"
+        self._resize_mode_btn.configure(state=base)
+        self._resize_w.configure(state=base)
+        self._resize_h.configure(state=base)
+        self._fixed_w1.configure(state=base)
+        self._fixed_w2.configure(state=base)
+        self._dual_sw.configure(state=base)
+        dual = self._dual_var.get()
+        # Dual output forces the _<width>px suffix, otherwise both versions
+        # would collide on the same output filename.
+        if dual:
+            self._auto_suffix_var.set(True)
+            self._auto_suffix_sw.configure(state="disabled")
+        else:
+            self._auto_suffix_sw.configure(state=base)
+        self._update_name_preview()
+
+    def _on_mobile_width_typed(self, event=None):
+        """Typing a mobile width is intent enough: sync the dual switch to it."""
+        try:
+            w2 = int(self._fixed_w2.get().strip() or 0)
+        except ValueError:
+            w2 = 0
+        if (w2 > 0) != self._dual_var.get():
+            self._dual_var.set(w2 > 0)
+        self._refresh_resize_states()
+
+    def _get_fixed_widths(self) -> list[int]:
+        """Return the target widths for fixed-width mode (deduplicated)."""
+        widths: list[int] = []
+        try:
+            w1 = int(self._fixed_w1.get().strip() or 0)
+            if w1 > 0:
+                widths.append(w1)
+        except ValueError:
+            pass
+        if self._dual_var.get():
+            try:
+                w2 = int(self._fixed_w2.get().strip() or 0)
+                if w2 > 0 and w2 not in widths:
+                    widths.append(w2)
+            except ValueError:
+                pass
+        return widths
+
+    def _update_name_preview(self):
+        """Show how output filenames will look, e.g. foto_1200px.avif."""
+        import pathlib
+        stem = pathlib.Path(self._files[0]).stem if self._files else "foto"
+        fmt = self._output_format_var.get().lower()
+        user_suffix = sanitize_suffix(self._suffix_entry.get().strip())
+
+        names: list[str] = []
+        if self._resize_var.get() and self._resize_mode == "fixed":
+            widths = self._get_fixed_widths()
+            if widths and (self._auto_suffix_var.get() or len(widths) > 1):
+                names = [f"{stem}{user_suffix}_{w}px.{fmt}" for w in widths]
+        if not names:
+            names = [f"{stem}{user_suffix}.{fmt}"]
+
+        self._name_preview_var.set(f"{I18N.get('name_preview')} " + "  ·  ".join(names))
 
     def _on_format_changed(self, value):
         fmt = value.lower()
         self._drop_zone.set_excluded_format(f".{fmt}")
+        self._update_name_preview()
 
         if fmt == "avif":
             self._q_frame.grid()
@@ -604,6 +761,8 @@ class MainWindow(ctk.CTk):
         else:
             self._preview.clear()
 
+        self._update_name_preview()
+
     # ==================================================================
     # Conversion
     # ==================================================================
@@ -635,21 +794,38 @@ class MainWindow(ctk.CTk):
         speed_label = self._speed_menu.get()
         speed = self._speed_map.get(speed_label, 5)
         subsampling = "4:2:0" if "4:2:0" in self._subsampling_menu.get() else "4:4:4"
+        suffix = self._suffix_entry.get().strip()
 
         resize_enabled = self._resize_var.get()
-        resize_w, resize_h = 0, 0
-        if resize_enabled:
-            w_str, h_str = self._resize_w.get().strip(), self._resize_h.get().strip()
-            try:
-                resize_w = int(w_str) if w_str else 0
-            except ValueError:
-                pass
-            try:
-                resize_h = int(h_str) if h_str else 0
-            except ValueError:
-                pass
+        resize_cfg = {"enabled": False, "width": 0, "height": 0}
+        variants: list[dict] | None = None
 
-        resize_cfg = {"enabled": resize_enabled, "width": resize_w, "height": resize_h}
+        if resize_enabled:
+            if self._resize_mode == "fixed":
+                widths = self._get_fixed_widths()
+                if len(widths) >= 2:
+                    # One output per width; height stays proportional per image
+                    variants = [
+                        {"resize_cfg": {"enabled": True, "width": w, "height": 0},
+                         "suffix": f"{suffix}_{w}px"}
+                        for w in widths
+                    ]
+                elif len(widths) == 1:
+                    resize_cfg = {"enabled": True, "width": widths[0], "height": 0}
+                    if self._auto_suffix_var.get():
+                        suffix = f"{suffix}_{widths[0]}px"
+            else:
+                resize_w, resize_h = 0, 0
+                w_str, h_str = self._resize_w.get().strip(), self._resize_h.get().strip()
+                try:
+                    resize_w = int(w_str) if w_str else 0
+                except ValueError:
+                    pass
+                try:
+                    resize_h = int(h_str) if h_str else 0
+                except ValueError:
+                    pass
+                resize_cfg = {"enabled": True, "width": resize_w, "height": resize_h}
 
         self._converting = True
         self._convert_btn.configure(state="disabled")
@@ -657,9 +833,11 @@ class MainWindow(ctk.CTk):
         self._delete_orig_btn.configure(state="disabled")
         self._stop_event.clear()
         self._successful_original_files.clear()
+        self._source_ok_counts = {}
+        self._variant_count = len(variants) if variants else 1
         self._batch_saved_bytes = 0
         self._batch_ok = 0
-        self._batch_total = len(self._files)
+        self._batch_total = len(self._files) * self._variant_count
         self._progress.set(0)
         self._status_var.set(I18N.get("status_converting"))
 
@@ -667,13 +845,12 @@ class MainWindow(ctk.CTk):
         keep_iptc = self._keep_iptc_var.get()
         output_format = self._output_format_var.get().lower()
         max_workers = int(self._threads_var.get())
-        suffix = self._suffix_entry.get().strip()
 
         thread = threading.Thread(
             target=self._run_batch,
             args=(self._files.copy(), self._output_dir, quality, keep_exif, keep_iptc,
                   self._custom_meta, speed, subsampling, resize_cfg, output_format,
-                  max_workers, suffix),
+                  max_workers, suffix, variants),
             daemon=True,
         )
         thread.start()
@@ -685,7 +862,8 @@ class MainWindow(ctk.CTk):
             self._cancel_btn.configure(state="disabled")
 
     def _run_batch(self, files, output_dir, quality, keep_exif, keep_iptc, custom_meta,
-                   speed, subsampling, resize_cfg, output_format, max_workers, suffix):
+                   speed, subsampling, resize_cfg, output_format, max_workers, suffix,
+                   variants=None):
         import logging
         logger = logging.getLogger(__name__)
 
@@ -708,6 +886,7 @@ class MainWindow(ctk.CTk):
                 stop_event=self._stop_event,
                 output_format=output_format,
                 suffix=suffix,
+                variants=variants,
             )
         except Exception as exc:
             log_exception(logger, "convert_batch raised", exc)
@@ -735,7 +914,10 @@ class MainWindow(ctk.CTk):
                     if result.success:
                         self._batch_ok += 1
                         self._batch_saved_bytes += max(0, result.original_size - result.converted_size)
-                        self._successful_original_files.add(result.source_path)
+                        ok_count = self._source_ok_counts.get(result.source_path, 0) + 1
+                        self._source_ok_counts[result.source_path] = ok_count
+                        if ok_count >= self._variant_count:
+                            self._successful_original_files.add(result.source_path)
                         self._preview.set_before(result.source_path)
                         self._preview.set_after(result.output_path)
                 elif msg[0] == "error":

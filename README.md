@@ -5,7 +5,7 @@
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-![Version](https://img.shields.io/badge/version-1.3.0-orange)
+![Version](https://img.shields.io/badge/version-1.4.0-orange)
 
 Aplicación de escritorio profesional para la **conversión masiva de imágenes**, pensada como herramienta esencial del flujo de trabajo de desarrollo web: toma lotes grandes de imágenes (PNG, JPG, WebP, AVIF) y los convierte a formatos modernos y optimizados (**AVIF, WebP, JPG o PNG**) con control fino de calidad, metadatos y dimensiones. Interfaz moderna, procesamiento paralelo y soporte multiplataforma nativo.
 
@@ -35,7 +35,8 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 | **Calidad configurable** | Slider de calidad 0–100, esfuerzo de compresión AVIF y submuestreo de color (4:2:0 / 4:4:4). |
 | **Transparencia** | Canal alpha preservado en AVIF/WebP/PNG (con 4:4:4 forzado en AVIF); fusión sobre fondo blanco en JPG. |
 | **JPEG progresivo** | Salida JPEG con `optimize` + `progressive` para mejor carga percibida en la web. |
-| **Redimensionado** | Redimensionado LANCZOS con cálculo automático proporcional (ancho ↔ alto). |
+| **Redimensionado** | Modo "Ancho fijo" con alto proporcional automático por imagen (sin distorsión), o ancho y alto personalizados. Redimensionado LANCZOS. |
+| **Doble conversión** | Genera dos versiones por imagen en un solo lote (ej. 1200px escritorio + 800px móvil) con sufijos automáticos `_1200px` / `_800px` y vista previa del nombre de salida. |
 | **Metadatos** | Preservación selectiva de EXIF e IPTC, y editor integrado (Autor, Título, Copyright, fechas, descripción). |
 | **Drag & Drop** | Soporte nativo robusto en Windows, macOS y Linux (rutas con espacios, URIs `file://`, multi-archivo). |
 | **Vista previa** | Comparativa Antes/Después con dimensiones, tamaños y % de ahorro. |
@@ -135,17 +136,15 @@ Detalles técnicos relevantes:
 
 ---
 
-## 🆕 Novedades de la versión 1.3.0
+## 🆕 Novedades de la versión 1.4.0
 
 Resumen de la última actualización (detalle completo en [CHANGELOG.md](CHANGELOG.md)):
 
-- **WebP como formato de salida**, con compresión máxima y transparencia.
-- **Carpeta de destino y sufijo de archivo** configurables desde la interfaz.
-- **Barra de progreso, botón cancelar y resumen de ahorro total** del lote.
-- **Auto-orientación EXIF** y **JPEG progresivo optimizado**.
-- **Rediseño visual completo** con tema centralizado y tipografía multiplataforma.
-- **Correcciones importantes**: el slider de núcleos ahora se aplica realmente, la validación de disco se ejecuta antes de cada lote, y el cambio de idioma conserva tus selecciones.
-- **Refuerzos de seguridad**: protección anti decompression-bomb, eliminación de inyección de argumentos en `explorer /select`, sufijos sanitizados y `.gitignore` ampliado.
+- **Modo "Ancho fijo"**: fijas el ancho (ej. 1200px) y el alto se calcula proporcionalmente por cada imagen, sin distorsión.
+- **Doble conversión escritorio + móvil**: dos versiones por imagen en un solo lote (ej. 1200px y 800px), aplicada de forma masiva.
+- **Sufijos automáticos de píxeles**: `fotografia40.jpg` → `fotografia40_1200px.avif` y `fotografia40_800px.avif`, combinables con el sufijo personalizado.
+- **Vista previa del nombre de salida** en vivo, según formato, sufijos y anchos elegidos.
+- **Progreso y limpieza de originales** coherentes con las variantes: se cuenta cada archivo generado y solo se pueden borrar los originales cuyas versiones se convirtieron todas con éxito.
 
 ---
 

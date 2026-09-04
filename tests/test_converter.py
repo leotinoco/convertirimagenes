@@ -151,6 +151,64 @@ class TestConverter(unittest.TestCase):
                 self.assertTrue(result.success, msg=f"{preset}: {result.error}")
                 self.assertGreater(result.converted_size, 0)
 
+    # ------------------------------------------------------------------
+    # Fixed-width resize (proportional height)
+    # ------------------------------------------------------------------
+    def test_fixed_width_keeps_aspect_ratio(self):
+        out_dir = os.path.join(self.tmp, "fixed_width")
+        os.makedirs(out_dir, exist_ok=True)
+        result = self.conv.convert_one(
+            self.png_path, out_dir, quality=60,
+            resize_cfg={"enabled": True, "width": 400, "height": 0},
+        )
+        self.assertTrue(result.success, msg=result.error)
+        with Image.open(result.output_path) as img:
+            # Source is 800×600 → width 400 must give height 300
+            self.assertEqual(img.size, (400, 300))
+
+    def test_batch_variants_two_widths(self):
+        out_dir = os.path.join(self.tmp, "variants")
+        os.makedirs(out_dir, exist_ok=True)
+        variants = [
+            {"resize_cfg": {"enabled": True, "width": 400, "height": 0}, "suffix": "_400px"},
+            {"resize_cfg": {"enabled": True, "width": 200, "height": 0}, "suffix": "_200px"},
+        ]
+        results = self.conv.convert_batch(
+            [self.png_path], out_dir, quality=60, variants=variants,
+        )
+        self.assertEqual(len(results), 2)
+        self.assertTrue(all(r.success for r in results),
+                        msg="; ".join(r.error for r in results if not r.success))
+
+        by_name = {os.path.basename(r.output_path): r for r in results}
+        self.assertIn("test_rgb_400px.avif", by_name)
+        self.assertIn("test_rgb_200px.avif", by_name)
+
+        with Image.open(by_name["test_rgb_400px.avif"].output_path) as img:
+            self.assertEqual(img.size, (400, 300))
+        with Image.open(by_name["test_rgb_200px.avif"].output_path) as img:
+            self.assertEqual(img.size, (200, 150))
+
+    def test_batch_variants_multiple_files(self):
+        out_dir = os.path.join(self.tmp, "variants_multi")
+        os.makedirs(out_dir, exist_ok=True)
+        variants = [
+            {"resize_cfg": {"enabled": True, "width": 400, "height": 0}, "suffix": "_400px"},
+            {"resize_cfg": {"enabled": True, "width": 200, "height": 0}, "suffix": "_200px"},
+        ]
+        results = self.conv.convert_batch(
+            [self.png_path, self.rgba_path], out_dir, quality=60, variants=variants,
+        )
+        # 2 files × 2 widths = 4 outputs
+        self.assertEqual(len(results), 4)
+        self.assertTrue(all(r.success for r in results),
+                        msg="; ".join(r.error for r in results if not r.success))
+        names = {os.path.basename(r.output_path) for r in results}
+        self.assertEqual(names, {
+            "test_rgb_400px.avif", "test_rgb_200px.avif",
+            "test_rgba_400px.avif", "test_rgba_200px.avif",
+        })
+
 
 class TestFileUtils(unittest.TestCase):
     def test_format_bytes_bytes(self):
@@ -196,6 +254,13 @@ class TestFileUtils(unittest.TestCase):
         out = pathlib.Path(build_output_path(src, output_format="avif", suffix="-opt"))
         self.assertEqual(out.stem, "photo-opt")
         self.assertEqual(out.suffix, ".avif")
+
+    def test_build_output_path_px_suffix(self):
+        import pathlib
+        from utils.file_utils import build_output_path
+        src = str(pathlib.Path.home() / "fotografia40.jpg")
+        out = pathlib.Path(build_output_path(src, output_format="avif", suffix="_1200px"))
+        self.assertEqual(out.name, "fotografia40_1200px.avif")
 
     def test_sanitize_suffix_strips_unsafe_chars(self):
         from utils.file_utils import sanitize_suffix
