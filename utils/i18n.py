@@ -28,6 +28,42 @@ _DICT = {
         "q_lbl": "Calidad de Compresión",
         "speed_lbl": "Esfuerzo de Compresión",
         "sub_lbl": "Submuestreo de Color (Chroma)",
+        "engine_hdr": "Motor de Codificación (solo AVIF)",
+        "engine_pillow": "Estándar (CPU) — recomendado",
+        "engine_svtav1": "Máxima compresión (SVT-AV1)",
+        "engine_nvenc": "GPU NVIDIA (experimental)",
+        "engine_na_tag": " — no disponible",
+        "desc_pillow": (
+            "✔ El más equilibrado y el predeterminado. Motor integrado, sin programas externos.\n"
+            "• Velocidad: la mejor. ~55 ms por imagen con esfuerzo «Ultra Rápido» (~18 img/s).\n"
+            "• Peso: 45.9 KB en una foto de 1200px (referencia).\n"
+            "• Es el único que conserva EXIF/IPTC y transparencia.\n"
+            "Úsalo salvo que necesites exprimir el peso al máximo."
+        ),
+        "desc_svtav1": (
+            "◆ El que produce los archivos más livianos, a costa de tiempo.\n"
+            "• Peso: ~20% menos que el estándar con la MISMA calidad visual\n"
+            "   (36.9 KB vs 45.9 KB medidos a igual SSIM).\n"
+            "• Velocidad: ~8x más lento por imagen que «Ultra Rápido».\n"
+            "• No conserva EXIF/IPTC; las imágenes con transparencia usan el estándar.\n"
+            "Elígelo cuando el peso de la página importe más que el tiempo de conversión."
+        ),
+        "desc_nvenc": (
+            "⚠ Experimental. Codificador AV1 por hardware de tu tarjeta NVIDIA.\n"
+            "• Velocidad: resultó MÁS LENTO que la CPU (~4 img/s vs ~18 img/s).\n"
+            "   Preparar la GPU cuesta más que comprimir una imagen pequeña.\n"
+            "• Peso: sin ventaja frente al estándar a igual calidad.\n"
+            "• No conserva EXIF/IPTC; las imágenes con transparencia usan el estándar.\n"
+            "No se recomienda para lotes; está aquí para comparar."
+        ),
+        "engine_needs_ffmpeg": (
+            "⚠ Requiere ffmpeg instalado y accesible en el PATH.\n"
+            "Sin él, esta opción usará automáticamente el motor estándar."
+        ),
+        "engine_only_avif": (
+            "ℹ Los motores alternativos solo aplican a la salida AVIF.\n"
+            "Con WEBP, JPG o PNG siempre se usa el motor estándar."
+        ),
         "resize_hdr": "Opciones de Redimensionado",
         "resize_en": "Habilitar Redimensionamiento",
         "resize_keep": "Preservar Relación de Aspecto",
@@ -113,6 +149,42 @@ _DICT = {
         "q_lbl": "Compression Quality",
         "speed_lbl": "Compression Effort",
         "sub_lbl": "Chroma Subsampling",
+        "engine_hdr": "Encoding Engine (AVIF only)",
+        "engine_pillow": "Standard (CPU) — recommended",
+        "engine_svtav1": "Maximum compression (SVT-AV1)",
+        "engine_nvenc": "NVIDIA GPU (experimental)",
+        "engine_na_tag": " — unavailable",
+        "desc_pillow": (
+            "✔ The most balanced option and the default. Built in, no external programs.\n"
+            "• Speed: the best. ~55 ms per image on «Ultra Fast» effort (~18 img/s).\n"
+            "• Size: 45.9 KB on a 1200px photo (baseline).\n"
+            "• The only one that preserves EXIF/IPTC and transparency.\n"
+            "Use it unless you need to squeeze out every last byte."
+        ),
+        "desc_svtav1": (
+            "◆ Produces the smallest files, at the cost of time.\n"
+            "• Size: ~20% smaller than standard at the SAME visual quality\n"
+            "   (36.9 KB vs 45.9 KB measured at equal SSIM).\n"
+            "• Speed: ~8x slower per image than «Ultra Fast».\n"
+            "• Drops EXIF/IPTC; images with transparency use the standard engine.\n"
+            "Pick it when page weight matters more than conversion time."
+        ),
+        "desc_nvenc": (
+            "⚠ Experimental. Hardware AV1 encoder on your NVIDIA card.\n"
+            "• Speed: measured SLOWER than the CPU (~4 img/s vs ~18 img/s).\n"
+            "   Setting up the GPU costs more than encoding one small image.\n"
+            "• Size: no advantage over standard at equal quality.\n"
+            "• Drops EXIF/IPTC; images with transparency use the standard engine.\n"
+            "Not recommended for batches; included for comparison."
+        ),
+        "engine_needs_ffmpeg": (
+            "⚠ Requires ffmpeg installed and on the PATH.\n"
+            "Without it, this option silently uses the standard engine."
+        ),
+        "engine_only_avif": (
+            "ℹ Alternative engines only apply to AVIF output.\n"
+            "WEBP, JPG and PNG always use the standard engine."
+        ),
         "resize_hdr": "Resizing Options",
         "resize_en": "Enable Resize",
         "resize_keep": "Preserve Aspect Ratio",

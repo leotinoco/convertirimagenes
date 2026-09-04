@@ -210,6 +210,156 @@ class TestConverter(unittest.TestCase):
         })
 
 
+class TestEncoderSelection(unittest.TestCase):
+    """Engine routing rules — these hold with or without ffmpeg installed."""
+
+    def test_pillow_always_available(self):
+        from core import encoders
+        self.assertTrue(encoders.engine_available(encoders.ENGINE_PILLOW))
+
+    def test_available_engines_lists_all(self):
+        from core import encoders
+        avail = encoders.available_engines()
+        self.assertEqual(set(avail), set(encoders.ENGINES))
+
+    def test_quality_mapping_anchors(self):
+        """Quality 60 matches the measured SSIM-equivalent settings."""
+        from core import encoders
+        self.assertEqual(encoders.quality_to_cq(60, encoders.ENGINE_SVTAV1), 30)
+        self.assertEqual(encoders.quality_to_cq(60, encoders.ENGINE_NVENC), 35)
+
+    def test_quality_mapping_is_monotonic_and_clamped(self):
+        from core import encoders
+        for eng in (encoders.ENGINE_SVTAV1, encoders.ENGINE_NVENC):
+            with self.subTest(engine=eng):
+                # Higher quality → lower CRF/CQ
+                self.assertLess(encoders.quality_to_cq(90, eng),
+                                encoders.quality_to_cq(30, eng))
+                # Never leaves the valid range
+                self.assertGreaterEqual(encoders.quality_to_cq(100, eng), 1)
+                self.assertLessEqual(encoders.quality_to_cq(0, eng), 63)
+
+    def test_pillow_engine_never_delegates(self):
+        from core import encoders
+        self.assertFalse(encoders.can_encode(encoders.ENGINE_PILLOW, "avif", False))
+
+    def test_non_avif_formats_fall_back(self):
+        from core import encoders
+        for fmt in ("webp", "jpg", "png"):
+            with self.subTest(fmt=fmt):
+                self.assertFalse(encoders.can_encode(encoders.ENGINE_SVTAV1, fmt, False))
+
+    def test_alpha_images_fall_back(self):
+        from core import encoders
+        self.assertFalse(encoders.can_encode(encoders.ENGINE_SVTAV1, "avif", True))
+
+    def test_unknown_engine_raises(self):
+        from core import encoders
+        from PIL import Image
+        with self.assertRaises(RuntimeError):
+            encoders.encode_avif(Image.new("RGB", (8, 8)), "x.avif", 60, "bogus")
+
+
+@unittest.skipUnless(AVIF_AVAILABLE, "pillow-avif-plugin not installed")
+class TestExternalEngines(unittest.TestCase):
+    """Real encodes through ffmpeg; skipped when an engine is unavailable."""
+
+    @classmethod
+    def setUpClass(cls):
+        from core.converter import Converter
+        cls.conv = Converter()
+        cls.tmp = tempfile.mkdtemp(prefix="engine_test_")
+
+        import random
+        rnd = random.Random(11)
+        cls.rgb = os.path.join(cls.tmp, "photo.png")
+        img = Image.new("RGB", (600, 400))
+        img.putdata([
+            (min(255, x % 256 + rnd.randint(0, 30)),
+             min(255, y % 256 + rnd.randint(0, 30)),
+             min(255, (x + y) % 256 + rnd.randint(0, 30)))
+            for y in range(400) for x in range(600)
+        ])
+        img.save(cls.rgb)
+
+        cls.rgba = os.path.join(cls.tmp, "logo.png")
+        Image.new("RGBA", (200, 150), (10, 90, 200, 120)).save(cls.rgba)
+
+    def _run(self, engine, src=None, output_format="avif"):
+        out_dir = os.path.join(self.tmp, f"{engine}_{output_format}")
+        os.makedirs(out_dir, exist_ok=True)
+        return self.conv.convert_one(
+            src or self.rgb, out_dir, quality=60,
+            output_format=output_format, engine=engine, keep_exif=False,
+        )
+
+    def test_svtav1_produces_valid_avif(self):
+        from core import encoders
+        if not encoders.engine_available(encoders.ENGINE_SVTAV1):
+            self.skipTest("libsvtav1 not available in ffmpeg")
+        r = self._run(encoders.ENGINE_SVTAV1)
+        self.assertTrue(r.success, msg=r.error)
+        self.assertEqual(r.engine, "svtav1")
+        with Image.open(r.output_path) as img:
+            self.assertEqual(img.format, "AVIF")
+            self.assertEqual(img.size, (600, 400))
+
+    def test_nvenc_produces_valid_avif(self):
+        from core import encoders
+        if not encoders.engine_available(encoders.ENGINE_NVENC):
+            self.skipTest("av1_nvenc not available in ffmpeg")
+        r = self._run(encoders.ENGINE_NVENC)
+        self.assertTrue(r.success, msg=r.error)
+        # NVENC can be listed but unusable (no GPU / driver); a fallback to
+        # pillow is a correct outcome, a failed conversion is not.
+        self.assertIn(r.engine, ("nvenc", "pillow"))
+        with Image.open(r.output_path) as img:
+            self.assertEqual(img.format, "AVIF")
+
+    def test_alpha_falls_back_to_pillow_and_keeps_transparency(self):
+        from core import encoders
+        if not encoders.engine_available(encoders.ENGINE_SVTAV1):
+            self.skipTest("libsvtav1 not available in ffmpeg")
+        r = self._run(encoders.ENGINE_SVTAV1, src=self.rgba)
+        self.assertTrue(r.success, msg=r.error)
+        self.assertEqual(r.engine, "pillow")
+        with Image.open(r.output_path) as img:
+            self.assertEqual(img.mode, "RGBA")
+
+    def test_non_avif_format_falls_back_to_pillow(self):
+        from core import encoders
+        if not encoders.engine_available(encoders.ENGINE_SVTAV1):
+            self.skipTest("libsvtav1 not available in ffmpeg")
+        r = self._run(encoders.ENGINE_SVTAV1, output_format="webp")
+        self.assertTrue(r.success, msg=r.error)
+        self.assertEqual(r.engine, "pillow")
+        self.assertTrue(r.output_path.endswith(".webp"))
+
+    def test_svtav1_is_smaller_than_pillow_at_same_quality(self):
+        """The whole point of the SVT-AV1 engine: fewer bytes."""
+        from core import encoders
+        if not encoders.engine_available(encoders.ENGINE_SVTAV1):
+            self.skipTest("libsvtav1 not available in ffmpeg")
+        r_pil = self._run(encoders.ENGINE_PILLOW)
+        r_svt = self._run(encoders.ENGINE_SVTAV1)
+        self.assertTrue(r_pil.success and r_svt.success)
+        self.assertLess(r_svt.converted_size, r_pil.converted_size)
+
+    def test_batch_passes_engine_through(self):
+        from core import encoders
+        if not encoders.engine_available(encoders.ENGINE_SVTAV1):
+            self.skipTest("libsvtav1 not available in ffmpeg")
+        out_dir = os.path.join(self.tmp, "batch_engine")
+        os.makedirs(out_dir, exist_ok=True)
+        results = self.conv.convert_batch(
+            [self.rgb], out_dir, quality=60,
+            engine=encoders.ENGINE_SVTAV1, keep_exif=False,
+        )
+        self.assertEqual(len(results), 1)
+        self.assertTrue(results[0].success, msg=results[0].error)
+        self.assertEqual(results[0].engine, "svtav1")
+
+
 class TestFileUtils(unittest.TestCase):
     def test_format_bytes_bytes(self):
         from utils.file_utils import format_bytes

@@ -156,6 +156,7 @@ class MainWindow(ctk.CTk):
         # Remember current selections before rebuilding translated menus
         prev_speed = self._speed_map.get(self._speed_menu.get(), 5)
         prev_sub_444 = "4:4:4" in self._subsampling_menu.get()
+        prev_engine = self._current_engine()
 
         I18N.set_language(value)
 
@@ -174,6 +175,13 @@ class MainWindow(ctk.CTk):
         self._resize_mode_btn.set(
             I18N.get("resize_mode_custom") if self._resize_mode == "custom"
             else I18N.get("resize_mode_fixed"))
+
+        self._engine_menu.configure(values=self._build_engine_labels())
+        for label, key in self._engine_map.items():
+            if key == prev_engine:
+                self._engine_menu.set(label)
+                break
+        self._on_engine_changed()
 
         self._update_name_preview()
         self._update_output_dir_label()
@@ -303,9 +311,29 @@ class MainWindow(ctk.CTk):
         )
         self._format_switch.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 14))
 
-        # 2. Settings & Optimization
+        # 2. Encoding engine (AVIF only)
+        eng_frame = self._card(mid, "engine_hdr")
+        eng_frame.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 10))
+        eng_frame.columnconfigure(0, weight=1)
+
+        self._engine_map: dict[str, str] = {}
+        self._engine_menu = ctk.CTkOptionMenu(
+            eng_frame, values=self._build_engine_labels(), font=theme.font(12),
+            command=self._on_engine_changed,
+            fg_color=theme.CARD_ALT, button_color=theme.ACCENT_SOFT,
+            button_hover_color=theme.ACCENT_HOVER, dropdown_fg_color=theme.CARD,
+        )
+        self._engine_menu.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 6))
+
+        self._engine_desc_var = tk.StringVar(value="")
+        ctk.CTkLabel(
+            eng_frame, textvariable=self._engine_desc_var, font=theme.font(10),
+            text_color=theme.TEXT_MUTED, anchor="w", justify="left", wraplength=330,
+        ).grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 12))
+
+        # 3. Settings & Optimization
         opt_frame = self._card(mid, "settings_opt")
-        opt_frame.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 10))
+        opt_frame.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 10))
 
         self._q_frame = ctk.CTkFrame(opt_frame, fg_color="transparent")
         self._q_frame.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 2))
@@ -366,9 +394,9 @@ class MainWindow(ctk.CTk):
             command=lambda v: self._threads_var.set(int(v)),
         ).grid(row=1, column=0, columnspan=3, sticky="ew", pady=(2, 0))
 
-        # 3. Output destination
+        # 4. Output destination
         out_frame = self._card(mid, "out_hdr")
-        out_frame.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 10))
+        out_frame.grid(row=3, column=0, sticky="ew", padx=8, pady=(0, 10))
         out_frame.columnconfigure(0, weight=1)
 
         self._out_dir_var = tk.StringVar(value=I18N.get("out_same_folder"))
@@ -406,9 +434,9 @@ class MainWindow(ctk.CTk):
         self._suffix_entry.grid(row=4, column=0, columnspan=2, sticky="ew", padx=14, pady=(0, 12))
         self._suffix_entry.bind("<KeyRelease>", lambda e: self._update_name_preview())
 
-        # 4. Resizing Options
+        # 5. Resizing Options
         res_frame = self._card(mid, "resize_hdr")
-        res_frame.grid(row=3, column=0, sticky="ew", padx=8, pady=(0, 10))
+        res_frame.grid(row=4, column=0, sticky="ew", padx=8, pady=(0, 10))
         res_frame.columnconfigure(1, weight=1)
 
         self._resize_var = tk.BooleanVar(value=False)
@@ -511,9 +539,9 @@ class MainWindow(ctk.CTk):
 
         self._wh_frame.grid_remove()  # fixed-width mode is the default
 
-        # 5. Metadata
+        # 6. Metadata
         meta_frame = self._card(mid, "meta_hdr")
-        meta_frame.grid(row=4, column=0, sticky="ew", padx=8, pady=(0, 8))
+        meta_frame.grid(row=5, column=0, sticky="ew", padx=8, pady=(0, 8))
         meta_frame.columnconfigure(1, weight=1)
 
         ctk.CTkLabel(meta_frame, textvariable=I18N.tvar(meta_frame, "meta_exif"),
@@ -543,6 +571,7 @@ class MainWindow(ctk.CTk):
         meta_btn.grid(row=3, column=0, columnspan=2, sticky="ew", padx=14, pady=(6, 12))
 
         self._on_resize_toggle()
+        self._on_engine_changed()
 
     # ------------------------------------------------------------------
     # Right panel (Preview + History)
@@ -572,6 +601,43 @@ class MainWindow(ctk.CTk):
     # ==================================================================
     # Event handlers
     # ==================================================================
+    # ------------------------------------------------------------------
+    # Encoding engine
+    # ------------------------------------------------------------------
+    def _build_engine_labels(self) -> list[str]:
+        """Build the engine dropdown labels and refresh the label→key map."""
+        from core import encoders
+
+        self._engine_map = {}
+        labels = []
+        for key in (encoders.ENGINE_PILLOW, encoders.ENGINE_SVTAV1, encoders.ENGINE_NVENC):
+            label = I18N.get(f"engine_{key}")
+            if not encoders.engine_available(key):
+                label += I18N.get("engine_na_tag")
+            self._engine_map[label] = key
+            labels.append(label)
+        return labels
+
+    def _current_engine(self) -> str:
+        """Engine key selected in the dropdown ('pillow' if anything is off)."""
+        from core import encoders
+        return self._engine_map.get(self._engine_menu.get(), encoders.ENGINE_PILLOW)
+
+    def _on_engine_changed(self, value=None):
+        """Show what the selected engine does, and why you'd pick it."""
+        from core import encoders
+
+        engine = self._current_engine()
+        parts = [I18N.get(f"desc_{engine}")]
+
+        if engine != encoders.ENGINE_PILLOW:
+            if not encoders.engine_available(engine):
+                parts.append(I18N.get("engine_needs_ffmpeg"))
+            if self._output_format_var.get().lower() != "avif":
+                parts.append(I18N.get("engine_only_avif"))
+
+        self._engine_desc_var.set("\n\n".join(parts))
+
     def _on_resize_toggle(self):
         self._refresh_resize_states()
 
@@ -654,6 +720,7 @@ class MainWindow(ctk.CTk):
         fmt = value.lower()
         self._drop_zone.set_excluded_format(f".{fmt}")
         self._update_name_preview()
+        self._on_engine_changed()
 
         if fmt == "avif":
             self._q_frame.grid()
@@ -845,12 +912,13 @@ class MainWindow(ctk.CTk):
         keep_iptc = self._keep_iptc_var.get()
         output_format = self._output_format_var.get().lower()
         max_workers = int(self._threads_var.get())
+        engine = self._current_engine()
 
         thread = threading.Thread(
             target=self._run_batch,
             args=(self._files.copy(), self._output_dir, quality, keep_exif, keep_iptc,
                   self._custom_meta, speed, subsampling, resize_cfg, output_format,
-                  max_workers, suffix, variants),
+                  max_workers, suffix, variants, engine),
             daemon=True,
         )
         thread.start()
@@ -863,7 +931,7 @@ class MainWindow(ctk.CTk):
 
     def _run_batch(self, files, output_dir, quality, keep_exif, keep_iptc, custom_meta,
                    speed, subsampling, resize_cfg, output_format, max_workers, suffix,
-                   variants=None):
+                   variants=None, engine="pillow"):
         import logging
         logger = logging.getLogger(__name__)
 
@@ -887,6 +955,7 @@ class MainWindow(ctk.CTk):
                 output_format=output_format,
                 suffix=suffix,
                 variants=variants,
+                engine=engine,
             )
         except Exception as exc:
             log_exception(logger, "convert_batch raised", exc)

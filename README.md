@@ -5,7 +5,7 @@
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-![Version](https://img.shields.io/badge/version-1.4.0-orange)
+![Version](https://img.shields.io/badge/version-1.5.0-orange)
 
 Aplicación de escritorio profesional para la **conversión masiva de imágenes**, pensada como herramienta esencial del flujo de trabajo de desarrollo web: toma lotes grandes de imágenes (PNG, JPG, WebP, AVIF) y los convierte a formatos modernos y optimizados (**AVIF, WebP, JPG o PNG**) con control fino de calidad, metadatos y dimensiones. Interfaz moderna, procesamiento paralelo y soporte multiplataforma nativo.
 
@@ -37,6 +37,7 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 | **JPEG progresivo** | Salida JPEG con `optimize` + `progressive` para mejor carga percibida en la web. |
 | **Redimensionado** | Modo "Ancho fijo" con alto proporcional automático por imagen (sin distorsión), o ancho y alto personalizados. Redimensionado LANCZOS. |
 | **Doble conversión** | Genera dos versiones por imagen en un solo lote (ej. 1200px escritorio + 800px móvil) con sufijos automáticos `_1200px` / `_800px` y vista previa del nombre de salida. |
+| **Motor de codificación** | Tres codificadores AVIF seleccionables con descripción comparativa en la interfaz: estándar (CPU, el más rápido), SVT-AV1 (~20% menos peso a igual calidad) y GPU NVIDIA (experimental). |
 | **Metadatos** | Preservación selectiva de EXIF e IPTC, y editor integrado (Autor, Título, Copyright, fechas, descripción). |
 | **Drag & Drop** | Soporte nativo robusto en Windows, macOS y Linux (rutas con espacios, URIs `file://`, multi-archivo). |
 | **Vista previa** | Comparativa Antes/Después con dimensiones, tamaños y % de ahorro. |
@@ -53,6 +54,7 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 
 - **Python 3.10+**
 - (Recomendado) Entorno virtual: `python -m venv venv`
+- (Opcional) **ffmpeg** en el `PATH` — solo si quieres los motores de codificación alternativos (SVT-AV1 y GPU NVIDIA). Sin él la app funciona igual con el motor estándar.
 
 ### 2. Instalación de dependencias
 
@@ -74,7 +76,7 @@ En Windows también puedes hacer doble clic en `ConvertirImagenes.bat`.
 
 1. Arrastra tus imágenes (o usa **Examinar archivos**).
 2. Elige el formato de salida (AVIF para máxima compresión, WebP para compatibilidad amplia).
-3. Ajusta calidad, redimensionado, carpeta de destino y sufijo si lo necesitas.
+3. Ajusta calidad, motor de codificación, redimensionado, carpeta de destino y sufijo si lo necesitas.
 4. Pulsa **Convertir Todo** y observa el progreso y el ahorro total.
 5. (Opcional) Elimina los originales cuando todo haya salido bien.
 
@@ -97,6 +99,7 @@ convertirimagenes/
 ├── app.py                  # Punto de entrada: logging, .env, arranque de la UI
 ├── core/
 │   ├── converter.py        # Motor de conversión (AVIF/WebP/JPG/PNG, paralelo, atómico)
+│   ├── encoders.py         # Codificadores AVIF opcionales vía ffmpeg (SVT-AV1, NVENC)
 │   ├── exif_handler.py     # Lectura/escritura EXIF + reset de orientación
 │   └── disk_validator.py   # Validación de espacio libre antes de cada lote
 ├── ui/
@@ -136,9 +139,21 @@ Detalles técnicos relevantes:
 
 ---
 
-## 🆕 Novedades de la versión 1.4.0
+## 🆕 Novedades de la versión 1.5.0
 
 Resumen de la última actualización (detalle completo en [CHANGELOG.md](CHANGELOG.md)):
+
+- **Motor de codificación seleccionable** para AVIF, con descripciones en la interfaz que explican qué da cada uno:
+
+  | Motor | Velocidad | Peso (foto 1200px) | Cuándo usarlo |
+  |---|---|---|---|
+  | **Estándar (CPU)** *(predeterminado)* | **~18 img/s** | 45.9 KB | Casi siempre. Único que conserva EXIF y transparencia. |
+  | **SVT-AV1** | ~2 img/s | **36.9 KB (−20%)** | Cuando el peso importa más que el tiempo. |
+  | **GPU NVIDIA** *(experimental)* | ~4 img/s | ~45 KB | Solo para comparar; resultó más lento que la CPU. |
+
+  Los motores externos requieren **ffmpeg** en el PATH; si falta, la app lo detecta y sigue usando el estándar sin fallar.
+
+### Versión 1.4.0
 
 - **Modo "Ancho fijo"**: fijas el ancho (ej. 1200px) y el alto se calcula proporcionalmente por cada imagen, sin distorsión.
 - **Doble conversión escritorio + móvil**: dos versiones por imagen en un solo lote (ej. 1200px y 800px), aplicada de forma masiva.

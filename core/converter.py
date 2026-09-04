@@ -44,6 +44,7 @@ if not AVIF_AVAILABLE:
 # ---------------------------------------------------------------------------
 MAX_PIXELS = Image.MAX_IMAGE_PIXELS  # keep Pillow's safe default
 
+from core import encoders
 from core.exif_handler import load_exif
 from utils.file_utils import build_output_path, get_file_size
 
@@ -75,6 +76,7 @@ class ConversionResult:
     success: bool
     error: str = ""
     subsampling: str = ""
+    engine: str = "pillow"      # encoder that actually produced the file
     savings_pct: float = field(init=False)
 
     def __post_init__(self):
@@ -112,6 +114,7 @@ class Converter:
         resize_cfg: dict | None = None,
         output_format: str = "avif",
         suffix: str = "",
+        engine: str = "pillow",
     ) -> ConversionResult:
         """
         Convert a single image.
@@ -140,9 +143,14 @@ class Converter:
             "avif", "webp", "jpg" or "png".
         suffix : str
             Optional filename suffix, e.g. "-opt" → photo-opt.avif.
+        engine : str
+            AVIF encoder: "pillow" (built-in, default), "svtav1" or "nvenc".
+            The external engines need ffmpeg and only handle AVIF output of
+            images without alpha; anything else falls back to Pillow.
         """
         output_path = build_output_path(input_path, output_dir, output_format, suffix)
         original_size = get_file_size(input_path)
+        used_engine = "pillow"
 
         try:
             with Image.open(input_path) as img:
@@ -248,7 +256,21 @@ class Converter:
                 fd, tmp_path = tempfile.mkstemp(suffix=tmp_suffix, dir=dest_dir)
                 try:
                     os.close(fd)
-                    img.save(tmp_path, **save_kwargs)
+                    if encoders.can_encode(engine, fmt, has_alpha):
+                        try:
+                            encoders.encode_avif(img, tmp_path, quality, engine)
+                            used_engine = engine
+                        except Exception as exc:
+                            # Never fail a conversion because an optional
+                            # encoder misbehaved — fall back to Pillow.
+                            import logging
+                            logging.getLogger(__name__).warning(
+                                "Engine '%s' failed on %s, using pillow: %s",
+                                engine, os.path.basename(input_path), exc,
+                            )
+                            img.save(tmp_path, **save_kwargs)
+                    else:
+                        img.save(tmp_path, **save_kwargs)
                     shutil.move(tmp_path, output_path)
                 except Exception:
                     try:
@@ -265,6 +287,7 @@ class Converter:
                 converted_size=converted_size,
                 success=True,
                 subsampling=effective_subsampling,
+                engine=used_engine,
             )
 
         except Image.DecompressionBombError:
@@ -310,6 +333,7 @@ class Converter:
         output_format: str = "avif",
         suffix: str = "",
         variants: list[dict] | None = None,
+        engine: str = "pillow",
     ) -> list[ConversionResult]:
         """
         Convert multiple images in parallel.
@@ -320,6 +344,8 @@ class Converter:
             converted once per variant (e.g. a 1200px desktop version and an
             800px mobile version in a single batch). When None, each file is
             converted once using *resize_cfg* / *suffix*.
+        engine : str
+            AVIF encoder for every job: "pillow", "svtav1" or "nvenc".
         """
         import concurrent.futures
         import logging
@@ -365,6 +391,7 @@ class Converter:
                     job_resize_cfg,
                     output_format,
                     job_suffix,
+                    engine,
                 )
                 futures[future] = path
 

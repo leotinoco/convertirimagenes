@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.5.0] - 2026-09-04
+
+### Añadido
+- ✨ **Motor de codificación seleccionable (solo AVIF)**: Nueva tarjeta que permite elegir entre tres codificadores, con el motor estándar siempre como predeterminado.
+  - **Estándar (CPU)** — motor integrado (libaom). El más rápido (~55 ms/img con «Ultra Rápido», ~18 img/s) y el único que conserva EXIF/IPTC y transparencia.
+  - **Máxima compresión (SVT-AV1)** — archivos **~20% más livianos a igual calidad visual** (36.9 KB vs 45.9 KB medidos a igual SSIM), a cambio de ser ~8x más lento por imagen.
+  - **GPU NVIDIA (experimental)** — codificador AV1 por hardware. Medido **más lento** que la CPU (~4 img/s vs ~18 img/s) porque inicializar la sesión CUDA/NVENC cuesta más que comprimir una imagen pequeña, y sin ventaja de peso. Se incluye para comparar.
+- ✨ **Descripciones comparativas en la interfaz**: Cada motor muestra qué hace, qué resultado da (velocidad y peso con cifras reales) y cuándo conviene frente a los otros. Se avisa si falta ffmpeg o si el formato elegido no es AVIF.
+
+### Mejorado
+- ⚡ **Detección automática de ffmpeg**: Los motores externos se habilitan solos si ffmpeg está en el PATH; si no, aparecen marcados como no disponibles.
+- 🛡️ **Retroceso seguro**: Si un motor externo falla, la imagen tiene transparencia o el formato no es AVIF, la conversión usa el motor estándar sin interrumpir el lote. `ConversionResult.engine` registra cuál se usó realmente.
+- 🐛 **Sin ventanas emergentes**: Las llamadas a ffmpeg se lanzan con `CREATE_NO_WINDOW` en Windows para que no parpadee una consola por cada imagen.
+
 ## [1.4.0] - 2026-08-05
 
 ### Añadido
