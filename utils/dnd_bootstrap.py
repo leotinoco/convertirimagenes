@@ -7,18 +7,13 @@ without caring about how the Tcl extension was loaded.
 
 Compatibility notes
 -------------------
-* **Windows**  – ``tkinterdnd2 >= 0.3`` ships pre-built ``tkdnd`` Tcl binaries
-  inside the package.  ``_require(root)`` loads them into the interpreter.
-* **macOS Intel / Apple Silicon**  – The standard PyPI ``tkinterdnd2`` ships
-  Intel-only ``tkdnd.dylib``.  For Apple Silicon (M1/M2/M3) you need the
-  fork ``tkinterdnd2-universal`` which includes a fat binary.
-  Recommendation for requirements.txt:
-      tkinterdnd2-universal>=0.3; sys_platform == "darwin"
-      tkinterdnd2>=0.3;           sys_platform != "darwin"
-* **Linux**  – Most distributions package ``tkdnd`` as a separate system
-  package (``apt install tkdnd`` on Debian/Ubuntu, ``dnf install tkdnd``
-  on Fedora).  If it is missing, ``_require`` will fail and we degrade
-  gracefully.
+* **All platforms**  – ``tkinterdnd2 >= 0.6`` ships pre-built ``tkdnd`` Tcl
+  binaries inside the package for Windows (x86, x64, arm64), Linux (x64,
+  arm64) and macOS (Intel and Apple Silicon), including Tcl 9 builds.
+  ``_require(root)`` loads the right one into the interpreter, so the old
+  ``tkinterdnd2-universal`` fork for Apple Silicon is no longer needed.
+* **Other architectures**  – If no bundled binary matches, ``_require`` fails
+  and we degrade gracefully (the "Browse files" button still works).
 
 PyInstaller
 -----------
@@ -103,7 +98,7 @@ def bootstrap_dnd(root: tk.Tk) -> bool:
         logger.error(
             "Failed to initialize TkinterDnD2 (%s: %s). "
             "The application will continue without Drag & Drop support. "
-            "On macOS Apple Silicon, try: pip install tkinterdnd2-universal",
+            "Try updating it: pip install --upgrade tkinterdnd2",
             type(exc).__name__,
             exc,
         )

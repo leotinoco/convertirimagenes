@@ -5,6 +5,23 @@ Todas las novedades relevantes de este proyecto serán documentadas en este arch
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.6.0] - 2026-10-02
+
+### Eliminado
+- 🗑️ **Motor GPU NVIDIA (NVENC)**: las mediciones de la 1.5.0 lo dejaban sin caso de uso. Con 167 ms y 42.4 KB por imagen era ~3.5x más lento que el motor estándar en «Ultra Rápido» y más pesado que SVT-AV1 (36.8 KB), porque inicializar la sesión CUDA/NVENC cuesta más que comprimir una imagen pequeña. Además exigía una tarjeta NVIDIA: sin ella fallaba y la imagen salía con el motor estándar. Quedan dos motores que cubren lo necesario: **Estándar (CPU)**, el más rápido y sin programas externos, y **Máxima compresión (SVT-AV1)**, para el mínimo peso. Un ajuste antiguo con `nvenc` sigue convirtiendo, con el motor estándar.
+- 🗑️ **Dependencia `pillow-avif-plugin`**: era un parche «hasta que Pillow tuviera soporte oficial», y Pillow lo trae desde la 11.3. Con Pillow 12.3 ambos usan la misma libavif 1.4.2 y generan archivos idénticos byte a byte. Solo se usa como respaldo si una instalación antigua de Pillow no tiene AVIF.
+
+### Actualizado
+- ⬆️ **Dependencias al día** (mínimos = versiones probadas): `customtkinter` 5.2.0 → **6.0.0**, `Pillow` 10.0.0 → **12.3.0**, `tkinterdnd2` 0.3.0 → **0.6.3**, `python-dotenv` 1.0.0 → **1.2.4**. `piexif` (1.1.3) y `darkdetect` (0.8.0) ya estaban en su última versión.
+- ⬆️ **Drag & Drop en macOS con el paquete oficial**: `tkinterdnd2` 0.6.x incluye los binarios de Windows, Linux y macOS (Intel y Apple Silicon, también para Tcl 9), así que ya no hace falta el fork `tkinterdnd2-universal`.
+
+### Corregido
+- 🐛 **Pruebas que podían saltarse en silencio**: la suite comprobaba el soporte AVIF importando el plugin, así que sin él se saltaba casi todo el convertidor sin avisar. Ahora usa la misma detección que la app (AVIF nativo de Pillow o, en su defecto, el plugin).
+
+### Verificado
+- ✅ 49/49 pruebas en un entorno limpio instalado solo desde `requirements.txt` (Python 3.12, ffmpeg 6.1 con SVT-AV1).
+- ✅ Interfaz real abierta con customtkinter 6.0.0: cambio de idioma, formato y motor, conversión con ambos motores (incluida una imagen con transparencia) y Drag & Drop cargado, sin errores ni advertencias.
+
 ## [1.5.0] - 2026-09-04
 
 ### Añadido

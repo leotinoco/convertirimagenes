@@ -28,7 +28,7 @@ a = Analysis(
     hiddenimports=[
         'tkinterdnd2',
         'PIL',
-        'pillow_avif',          # pillow-avif-plugin registers via entry_points
+        'PIL.AvifImagePlugin',  # native AVIF (Pillow >= 11.3), loaded lazily
         'piexif',
         'customtkinter',
     ],

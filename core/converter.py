@@ -19,21 +19,23 @@ import threading
 from dataclasses import dataclass, field
 from typing import Callable
 
-# Register avif plugin as early as possible.
-# Pillow >= 11.3 ships native AVIF support; fall back to pillow-avif-plugin.
-try:
-    import pillow_avif  # noqa: F401  registers itself with Pillow
-    AVIF_AVAILABLE = True
-except ImportError:
-    AVIF_AVAILABLE = False
-
 from PIL import Image, ImageOps, features
 
+# AVIF support. Pillow >= 11.3 ships it natively (the official wheels bundle
+# libavif), so pillow-avif-plugin is no longer a dependency: it was only meant
+# to fill the gap until official support landed, and on Pillow 12 it produces
+# byte-for-byte the same files with the same libavif. It is still picked up as
+# a fallback for an older Pillow or a source build compiled without libavif.
+try:
+    AVIF_AVAILABLE = features.check("avif")
+except Exception:
+    AVIF_AVAILABLE = False
+
 if not AVIF_AVAILABLE:
-    # Native AVIF support (Pillow 11.3+ compiled with libavif)
     try:
-        AVIF_AVAILABLE = features.check("avif")
-    except Exception:
+        import pillow_avif  # noqa: F401  registers itself with Pillow
+        AVIF_AVAILABLE = True
+    except ImportError:
         AVIF_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
@@ -94,8 +96,8 @@ class Converter:
     def __init__(self):
         if not AVIF_AVAILABLE:
             raise RuntimeError(
-                "pillow-avif-plugin no está instalado.\n"
-                "Ejecuta: pip install pillow-avif-plugin"
+                "Esta versión de Pillow no tiene soporte AVIF.\n"
+                "Ejecuta: pip install --upgrade -r requirements.txt"
             )
 
     # ------------------------------------------------------------------
@@ -144,9 +146,10 @@ class Converter:
         suffix : str
             Optional filename suffix, e.g. "-opt" → photo-opt.avif.
         engine : str
-            AVIF encoder: "pillow" (built-in, default), "svtav1" or "nvenc".
-            The external engines need ffmpeg and only handle AVIF output of
-            images without alpha; anything else falls back to Pillow.
+            AVIF encoder: "pillow" (built-in, default) or "svtav1".
+            SVT-AV1 needs ffmpeg and only handles AVIF output of images
+            without alpha; anything else (including an unknown engine name)
+            falls back to Pillow.
         """
         output_path = build_output_path(input_path, output_dir, output_format, suffix)
         original_size = get_file_size(input_path)
@@ -345,7 +348,7 @@ class Converter:
             800px mobile version in a single batch). When None, each file is
             converted once using *resize_cfg* / *suffix*.
         engine : str
-            AVIF encoder for every job: "pillow", "svtav1" or "nvenc".
+            AVIF encoder for every job: "pillow" or "svtav1".
         """
         import concurrent.futures
         import logging

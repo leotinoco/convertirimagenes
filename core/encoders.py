@@ -1,21 +1,23 @@
 """
-encoders.py — optional external AVIF encoders driven by ffmpeg.
+encoders.py — optional external AVIF encoder driven by ffmpeg.
 
 The built-in Pillow/libaom path is always available and stays the default.
-These engines are strictly opt-in alternatives for AVIF output:
+SVT-AV1 is a strictly opt-in alternative for AVIF output:
 
   svtav1  SVT-AV1. Roughly 20% smaller files at the same visual quality
           (measured 36.9 KB vs 45.9 KB at SSIM ~0.952, 1200px wide), at the
           cost of a slower per-image encode.
-  nvenc   NVIDIA hardware AV1 (NVENC). Measured *slower* than the CPU path for
-          batches of stills — creating the CUDA/NVENC session costs far more
-          than encoding a single small frame — and with no size advantage.
-          Kept as an experimental option.
 
-Both engines only apply to AVIF output, and only to images without an alpha
-channel; every other case transparently falls back to the Pillow encoder.
-They also do not carry EXIF/IPTC into the output (ffmpeg re-encodes from raw
-pixels), which is usually desirable for images published to the web.
+It only applies to AVIF output, and only to images without an alpha channel;
+every other case transparently falls back to the Pillow encoder. It also does
+not carry EXIF/IPTC into the output (ffmpeg re-encodes from raw pixels), which
+is usually desirable for images published to the web.
+
+The NVIDIA hardware encoder (av1_nvenc) was removed in 1.6.0. Measured on
+stills it was ~3.5x slower than the built-in encoder on «Ultra Fast» —
+creating the CUDA/NVENC session costs far more than encoding one small
+frame — and its files were heavier than SVT-AV1's, so it never was the right
+pick. It also needed an NVIDIA GPU, and without one it failed and fell back.
 """
 from __future__ import annotations
 
@@ -29,13 +31,11 @@ logger = logging.getLogger(__name__)
 
 ENGINE_PILLOW = "pillow"
 ENGINE_SVTAV1 = "svtav1"
-ENGINE_NVENC = "nvenc"
-ENGINES = (ENGINE_PILLOW, ENGINE_SVTAV1, ENGINE_NVENC)
+ENGINES = (ENGINE_PILLOW, ENGINE_SVTAV1)
 
-# ffmpeg encoder name backing each engine
+# ffmpeg encoder name backing each external engine
 _FFMPEG_ENCODER = {
     ENGINE_SVTAV1: "libsvtav1",
-    ENGINE_NVENC: "av1_nvenc",
 }
 
 # Hide the console window ffmpeg would otherwise flash for every image.
@@ -74,7 +74,7 @@ def _probe() -> None:
             return
 
         for engine, enc_name in _FFMPEG_ENCODER.items():
-            # Encoder lines look like: " V....D av1_nvenc  NVIDIA NVENC av1 ..."
+            # Encoder lines look like: " V..... libsvtav1  SVT-AV1(...) encoder ..."
             if any(line.split()[1:2] == [enc_name] for line in out.splitlines()
                    if len(line.split()) >= 2):
                 _available.add(engine)
@@ -105,14 +105,13 @@ def available_engines() -> dict[str, bool]:
 # ---------------------------------------------------------------------------
 # Quality mapping
 # ---------------------------------------------------------------------------
-def quality_to_cq(quality: int, engine: str) -> int:
+def quality_to_cq(quality: int, engine: str = ENGINE_SVTAV1) -> int:
     """
-    Map the app's 0-100 quality slider onto each encoder's CRF/CQ scale
-    (where lower means better). The factors are anchored on measurements at
-    1200px: quality 60 matches SVT-AV1 crf 30 and NVENC cq 35 in SSIM.
+    Map the app's 0-100 quality slider onto SVT-AV1's CRF scale (where lower
+    means better). Anchored on measurements at 1200px: quality 60 matches
+    crf 30 in SSIM.
     """
-    factor = 0.75 if engine == ENGINE_SVTAV1 else 0.875
-    return max(1, min(63, round((100 - quality) * factor)))
+    return max(1, min(63, round((100 - quality) * 0.75)))
 
 
 # ---------------------------------------------------------------------------
@@ -148,10 +147,7 @@ def encode_avif(img, output_path: str, quality: int, engine: str) -> None:
     w, h = img.size
     cq = quality_to_cq(quality, engine)
 
-    if engine == ENGINE_SVTAV1:
-        codec_args = ["-c:v", "libsvtav1", "-crf", str(cq), "-preset", "6"]
-    else:
-        codec_args = ["-c:v", "av1_nvenc", "-cq", str(cq), "-preset", "p5"]
+    codec_args = ["-c:v", enc_name, "-crf", str(cq), "-preset", "6"]
 
     cmd = [
         exe, "-hide_banner", "-loglevel", "error", "-y",

@@ -31,7 +31,6 @@ _DICT = {
         "engine_hdr": "Motor de Codificación (solo AVIF)",
         "engine_pillow": "Estándar (CPU) — recomendado",
         "engine_svtav1": "Máxima compresión (SVT-AV1)",
-        "engine_nvenc": "GPU NVIDIA (experimental)",
         "engine_na_tag": " — no disponible",
         "desc_pillow": (
             "✔ El más rápido y el predeterminado. Motor integrado, sin programas externos.\n"
@@ -48,20 +47,12 @@ _DICT = {
             "• No conserva EXIF/IPTC; las imágenes con transparencia usan el estándar.\n"
             "Elígelo cuando el peso de la página importe más que el tiempo."
         ),
-        "desc_nvenc": (
-            "⚠ Experimental. Codificador AV1 por hardware de tu tarjeta NVIDIA.\n"
-            "• Velocidad: 167 ms/img (~6 img/s). Supera al esfuerzo «Equilibrado»,\n"
-            "   pero el estándar en «Ultra Rápido» sigue siendo ~3.5x más rápido.\n"
-            "• Peso: 42.4 KB, entre el estándar y SVT-AV1.\n"
-            "• No conserva EXIF/IPTC; las imágenes con transparencia usan el estándar.\n"
-            "Útil si la CPU está saturada; para peso mínimo usa SVT-AV1."
-        ),
         "engine_needs_ffmpeg": (
             "⚠ Requiere ffmpeg instalado y accesible en el PATH.\n"
             "Sin él, esta opción usará automáticamente el motor estándar."
         ),
         "engine_only_avif": (
-            "ℹ Los motores alternativos solo aplican a la salida AVIF.\n"
+            "ℹ SVT-AV1 solo aplica a la salida AVIF.\n"
             "Con WEBP, JPG o PNG siempre se usa el motor estándar."
         ),
         "resize_hdr": "Opciones de Redimensionado",
@@ -152,7 +143,6 @@ _DICT = {
         "engine_hdr": "Encoding Engine (AVIF only)",
         "engine_pillow": "Standard (CPU) — recommended",
         "engine_svtav1": "Maximum compression (SVT-AV1)",
-        "engine_nvenc": "NVIDIA GPU (experimental)",
         "engine_na_tag": " — unavailable",
         "desc_pillow": (
             "✔ The fastest option and the default. Built in, no external programs.\n"
@@ -169,20 +159,12 @@ _DICT = {
             "• Drops EXIF/IPTC; images with transparency use the standard engine.\n"
             "Pick it when page weight matters more than conversion time."
         ),
-        "desc_nvenc": (
-            "⚠ Experimental. Hardware AV1 encoder on your NVIDIA card.\n"
-            "• Speed: 167 ms/img (~6 img/s). Beats «Balanced» effort, but the\n"
-            "   standard engine on «Ultra Fast» is still ~3.5x faster.\n"
-            "• Size: 42.4 KB, between standard and SVT-AV1.\n"
-            "• Drops EXIF/IPTC; images with transparency use the standard engine.\n"
-            "Useful when the CPU is saturated; for minimum size use SVT-AV1."
-        ),
         "engine_needs_ffmpeg": (
             "⚠ Requires ffmpeg installed and on the PATH.\n"
             "Without it, this option silently uses the standard engine."
         ),
         "engine_only_avif": (
-            "ℹ Alternative engines only apply to AVIF output.\n"
+            "ℹ SVT-AV1 only applies to AVIF output.\n"
             "WEBP, JPG and PNG always use the standard engine."
         ),
         "resize_hdr": "Resizing Options",

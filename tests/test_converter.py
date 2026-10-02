@@ -18,16 +18,15 @@ import unittest
 # Ensure the project root is importable
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
-try:
-    import pillow_avif  # noqa: F401
-    AVIF_AVAILABLE = True
-except ImportError:
-    AVIF_AVAILABLE = False
+# Same detection the app uses: Pillow's native AVIF, or pillow-avif-plugin on
+# an older Pillow. Checking only for the plugin would silently skip these
+# tests now that the plugin is no longer a dependency.
+from core.converter import AVIF_AVAILABLE
 
 from PIL import Image
 
 
-@unittest.skipUnless(AVIF_AVAILABLE, "pillow-avif-plugin not installed")
+@unittest.skipUnless(AVIF_AVAILABLE, "Pillow without AVIF support")
 class TestConverter(unittest.TestCase):
 
     @classmethod
@@ -226,18 +225,24 @@ class TestEncoderSelection(unittest.TestCase):
         """Quality 60 matches the measured SSIM-equivalent settings."""
         from core import encoders
         self.assertEqual(encoders.quality_to_cq(60, encoders.ENGINE_SVTAV1), 30)
-        self.assertEqual(encoders.quality_to_cq(60, encoders.ENGINE_NVENC), 35)
 
     def test_quality_mapping_is_monotonic_and_clamped(self):
         from core import encoders
-        for eng in (encoders.ENGINE_SVTAV1, encoders.ENGINE_NVENC):
-            with self.subTest(engine=eng):
-                # Higher quality → lower CRF/CQ
-                self.assertLess(encoders.quality_to_cq(90, eng),
-                                encoders.quality_to_cq(30, eng))
-                # Never leaves the valid range
-                self.assertGreaterEqual(encoders.quality_to_cq(100, eng), 1)
-                self.assertLessEqual(encoders.quality_to_cq(0, eng), 63)
+        eng = encoders.ENGINE_SVTAV1
+        # Higher quality → lower CRF
+        self.assertLess(encoders.quality_to_cq(90, eng), encoders.quality_to_cq(30, eng))
+        # Never leaves the valid range
+        self.assertGreaterEqual(encoders.quality_to_cq(100, eng), 1)
+        self.assertLessEqual(encoders.quality_to_cq(0, eng), 63)
+
+    def test_gpu_engine_was_removed(self):
+        """NVENC lost on both speed and size in the measurements (1.6.0)."""
+        from core import encoders
+        self.assertEqual(encoders.ENGINES, (encoders.ENGINE_PILLOW, encoders.ENGINE_SVTAV1))
+        self.assertFalse(hasattr(encoders, "ENGINE_NVENC"))
+        # The old name is just an unavailable engine: routing falls back.
+        self.assertFalse(encoders.engine_available("nvenc"))
+        self.assertFalse(encoders.can_encode("nvenc", "avif", False))
 
     def test_pillow_engine_never_delegates(self):
         from core import encoders
@@ -260,7 +265,7 @@ class TestEncoderSelection(unittest.TestCase):
             encoders.encode_avif(Image.new("RGB", (8, 8)), "x.avif", 60, "bogus")
 
 
-@unittest.skipUnless(AVIF_AVAILABLE, "pillow-avif-plugin not installed")
+@unittest.skipUnless(AVIF_AVAILABLE, "Pillow without AVIF support")
 class TestExternalEngines(unittest.TestCase):
     """Real encodes through ffmpeg; skipped when an engine is unavailable."""
 
@@ -304,15 +309,11 @@ class TestExternalEngines(unittest.TestCase):
             self.assertEqual(img.format, "AVIF")
             self.assertEqual(img.size, (600, 400))
 
-    def test_nvenc_produces_valid_avif(self):
-        from core import encoders
-        if not encoders.engine_available(encoders.ENGINE_NVENC):
-            self.skipTest("av1_nvenc not available in ffmpeg")
-        r = self._run(encoders.ENGINE_NVENC)
+    def test_removed_gpu_engine_name_falls_back_to_pillow(self):
+        """A stale "nvenc" setting must still convert, with the standard engine."""
+        r = self._run("nvenc")
         self.assertTrue(r.success, msg=r.error)
-        # NVENC can be listed but unusable (no GPU / driver); a fallback to
-        # pillow is a correct outcome, a failed conversion is not.
-        self.assertIn(r.engine, ("nvenc", "pillow"))
+        self.assertEqual(r.engine, "pillow")
         with Image.open(r.output_path) as img:
             self.assertEqual(img.format, "AVIF")
 

@@ -610,7 +610,7 @@ class MainWindow(ctk.CTk):
 
         self._engine_map = {}
         labels = []
-        for key in (encoders.ENGINE_PILLOW, encoders.ENGINE_SVTAV1, encoders.ENGINE_NVENC):
+        for key in encoders.ENGINES:
             label = I18N.get(f"engine_{key}")
             if not encoders.engine_available(key):
                 label += I18N.get("engine_na_tag")
@@ -839,7 +839,11 @@ class MainWindow(ctk.CTk):
         if not self._files:
             return
         if self._converter is None:
-            messagebox.showerror("Error", "pillow-avif-plugin is required.")
+            messagebox.showerror(
+                "Error",
+                "Pillow sin soporte AVIF / Pillow without AVIF support.\n"
+                "pip install --upgrade -r requirements.txt",
+            )
             return
 
         # Disk-space validation on the destination volume

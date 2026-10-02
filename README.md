@@ -5,7 +5,7 @@
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-![Version](https://img.shields.io/badge/version-1.5.0-orange)
+![Version](https://img.shields.io/badge/version-1.6.0-orange)
 
 Aplicación de escritorio profesional para la **conversión masiva de imágenes**, pensada como herramienta esencial del flujo de trabajo de desarrollo web: toma lotes grandes de imágenes (PNG, JPG, WebP, AVIF) y los convierte a formatos modernos y optimizados (**AVIF, WebP, JPG o PNG**) con control fino de calidad, metadatos y dimensiones. Interfaz moderna, procesamiento paralelo y soporte multiplataforma nativo.
 
@@ -38,7 +38,7 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 | **JPEG progresivo** | Salida JPEG con `optimize` + `progressive` para mejor carga percibida en la web. |
 | **Redimensionado** | Modo "Ancho fijo" con alto proporcional automático por imagen (sin distorsión), o ancho y alto personalizados. Redimensionado LANCZOS. |
 | **Doble conversión** | Genera dos versiones por imagen en un solo lote (ej. 1200px escritorio + 800px móvil) con sufijos automáticos `_1200px` / `_800px` y vista previa del nombre de salida. |
-| **Motor de codificación** | Tres codificadores AVIF seleccionables con descripción comparativa en la interfaz: estándar (CPU, el más rápido), SVT-AV1 (~20% menos peso a igual calidad) y GPU NVIDIA (experimental). |
+| **Motor de codificación** | Dos codificadores AVIF seleccionables con descripción comparativa en la interfaz: estándar (CPU, el más rápido, sin programas externos) y SVT-AV1 (~20% menos peso a igual calidad). |
 | **Metadatos** | Preservación selectiva de EXIF e IPTC, y editor integrado (Autor, Título, Copyright, fechas, descripción). |
 | **Drag & Drop** | Soporte nativo robusto en Windows, macOS y Linux (rutas con espacios, URIs `file://`, multi-archivo). |
 | **Vista previa** | Comparativa Antes/Después con dimensiones, tamaños y % de ahorro. |
@@ -55,12 +55,11 @@ Todas las cifras son **medidas reales**, no estimaciones. Metodología: 12 fotog
 
 ### Resumen: mismo resultado visual, distinto coste
 
-Estas cinco filas producen prácticamente **la misma calidad** (SSIM ≈ 0.95). Lo que cambia es el peso y el tiempo:
+Estas cuatro filas producen prácticamente **la misma calidad** (SSIM ≈ 0.95). Lo que cambia es el peso y el tiempo:
 
 | Método | Peso | Reducción | Tiempo | Velocidad | Calidad |
 |---|---|---|---|---|---|
 | **AVIF · SVT-AV1** | **36.8 KB** 🥇 | 96.9% | 198 ms | ~5 img/s | 0.9514 |
-| AVIF · GPU NVENC | 42.4 KB | 96.4% | 167 ms | ~6 img/s | 0.9533 |
 | AVIF · Estándar, esfuerzo Lento | 45.1 KB | 96.1% | 1279 ms | ~0.8 img/s | 0.9527 |
 | AVIF · Estándar, esfuerzo Equilibrado | 45.6 KB | 96.1% | 251 ms | ~4 img/s | 0.9515 |
 | **AVIF · Estándar, Ultra Rápido** | 47.0 KB | 96.0% | **48 ms** 🥇 | **~21 img/s** | 0.9491 |
@@ -99,18 +98,18 @@ Subir el esfuerzo multiplica el tiempo por 26 para ahorrar un 4% de peso. **Para
 
 > ⚠️ **PNG no sirve para fotografías**: al ser sin pérdida, el resultado pesó *más que el JPG original*. Úsalo solo para logotipos, iconos y capturas con texto.
 
-### Los tres motores de codificación AVIF
+### Los dos motores de codificación AVIF
 
-| | Estándar (CPU) | SVT-AV1 | GPU NVIDIA |
-|---|---|---|---|
-| **Velocidad** | 🥇 48 ms (Ultra Rápido) | 198 ms | 167 ms |
-| **Peso** | 47.0 KB | 🥇 36.8 KB | 42.4 KB |
-| **Conserva EXIF/IPTC** | ✅ Sí | ❌ No | ❌ No |
-| **Soporta transparencia** | ✅ Sí | ❌ Usa el estándar | ❌ Usa el estándar |
-| **Requiere ffmpeg** | No | Sí | Sí + GPU NVIDIA |
-| **Ideal para** | El día a día | Peso mínimo | CPU saturada |
+| | Estándar (CPU) | SVT-AV1 |
+|---|---|---|
+| **Velocidad** | 🥇 48 ms (Ultra Rápido) | 198 ms |
+| **Peso** | 47.0 KB | 🥇 36.8 KB |
+| **Conserva EXIF/IPTC** | ✅ Sí | ❌ No |
+| **Soporta transparencia** | ✅ Sí | ❌ Usa el estándar |
+| **Requiere ffmpeg** | No | Sí |
+| **Ideal para** | El día a día, en cualquier equipo | Peso mínimo |
 
-**Sobre la GPU:** el codificador AV1 por hardware funciona, pero no es la bala de plata que parece. Codificar una imagen de 1200px son milisegundos; lo caro es inicializar la sesión CUDA/NVENC, y eso se paga en cada imagen. Termina siendo más rápido que el esfuerzo «Equilibrado» pero **~3.5x más lento que el motor estándar en «Ultra Rápido»**. Los codificadores por hardware están pensados para video, donde ese arranque se amortiza entre miles de fotogramas.
+**¿Y la GPU NVIDIA?** Hasta la 1.5.0 hubo un tercer motor por hardware (NVENC), retirado en la 1.6.0 porque las mediciones lo dejaban sin un caso de uso: con 167 ms y 42.4 KB por imagen era **~3.5x más lento que el estándar en «Ultra Rápido»** y **más pesado que SVT-AV1**. Codificar una imagen de 1200px son milisegundos; lo caro es inicializar la sesión CUDA/NVENC, y eso se paga en cada imagen. Los codificadores por hardware están pensados para video, donde ese arranque se amortiza entre miles de fotogramas. Además exigía una tarjeta NVIDIA: sin ella fallaba y la imagen salía igualmente con el motor estándar.
 
 ---
 
@@ -120,7 +119,7 @@ Subir el esfuerzo multiplica el tiempo por 26 para ahorrar un 4% de peso. **Para
 
 - **Python 3.10+**
 - (Recomendado) Entorno virtual: `python -m venv venv`
-- (Opcional) **ffmpeg** en el `PATH` — solo si quieres los motores de codificación alternativos (SVT-AV1 y GPU NVIDIA). Sin él la app funciona igual con el motor estándar.
+- (Opcional) **ffmpeg** en el `PATH` — solo si quieres el motor de máxima compresión (SVT-AV1). Sin él la app funciona igual con el motor estándar.
 
 ### 2. Instalación de dependencias
 
@@ -128,7 +127,7 @@ Subir el esfuerzo multiplica el tiempo por 26 para ahorrar un 4% de peso. **Para
 pip install -r requirements.txt
 ```
 
-> **macOS:** para Drag & Drop instala el fork universal: `pip install tkinterdnd2-universal`
+> **¿Vienes de una versión anterior?** Ejecuta `pip install --upgrade -r requirements.txt`. Ya no hacen falta `pillow-avif-plugin` (Pillow trae AVIF propio) ni, en macOS, el fork `tkinterdnd2-universal` (el paquete oficial ya incluye Intel y Apple Silicon); puedes desinstalarlos.
 
 ### 3. Ejecución
 
@@ -165,7 +164,7 @@ convertirimagenes/
 ├── app.py                  # Punto de entrada: logging, .env, arranque de la UI
 ├── core/
 │   ├── converter.py        # Motor de conversión (AVIF/WebP/JPG/PNG, paralelo, atómico)
-│   ├── encoders.py         # Codificadores AVIF opcionales vía ffmpeg (SVT-AV1, NVENC)
+│   ├── encoders.py         # Codificador AVIF opcional vía ffmpeg (SVT-AV1)
 │   ├── exif_handler.py     # Lectura/escritura EXIF + reset de orientación
 │   └── disk_validator.py   # Validación de espacio libre antes de cada lote
 ├── ui/
@@ -188,7 +187,7 @@ Detalles técnicos relevantes:
 
 - **Escritura atómica**: cada imagen se codifica a un archivo temporal y luego se mueve a su destino final, evitando archivos corruptos si el proceso se interrumpe.
 - **Paralelismo**: `ThreadPoolExecutor` — Pillow libera el GIL durante la codificación, por lo que los hilos escalan bien y comparten memoria de forma segura.
-- **AVIF con fallback nativo**: usa `pillow-avif-plugin` y, si no está disponible, el soporte AVIF nativo de Pillow ≥ 11.3.
+- **AVIF nativo**: usa el soporte AVIF que Pillow trae de serie desde la 11.3 (libavif incluida en sus paquetes). `pillow-avif-plugin` solo se usa como respaldo si una instalación antigua de Pillow no tiene AVIF.
 - **UI desacoplada del trabajo**: la conversión corre en un hilo aparte y se comunica con la interfaz mediante una cola (`queue.Queue`) sondeada cada 80 ms — la ventana nunca se congela.
 
 ---
@@ -205,21 +204,25 @@ Detalles técnicos relevantes:
 
 ---
 
-## 🆕 Novedades de la versión 1.5.0
+## 🆕 Novedades de la versión 1.6.0
 
 Resumen de la última actualización (detalle completo en [CHANGELOG.md](CHANGELOG.md)):
 
-- **Motor de codificación seleccionable** para AVIF, con descripciones en la interfaz que explican qué da cada uno:
+- **Se retira el motor GPU NVIDIA**: las mediciones lo dejaban sin caso de uso (más lento que el estándar y más pesado que SVT-AV1). Quedan dos motores que cubren lo necesario: el **estándar**, el más rápido y sin programas externos, y **SVT-AV1**, para el mínimo peso. Ver [por qué](#los-dos-motores-de-codificación-avif).
+- **Dependencias al día**, probadas con la app real:
 
-  | Motor | Velocidad | Peso (foto 1200px) | Cuándo usarlo |
-  |---|---|---|---|
-  | **Estándar (CPU)** *(predeterminado)* | **~21 img/s** | 47.0 KB | Casi siempre. Único que conserva EXIF y transparencia. |
-  | **SVT-AV1** | ~5 img/s | **36.8 KB (−19%)** | Cuando el peso importa más que el tiempo. |
-  | **GPU NVIDIA** *(experimental)* | ~6 img/s | 42.4 KB | Si la CPU está saturada. |
+  | Componente | Antes (mínimo) | Ahora |
+  |---|---|---|
+  | customtkinter | 5.2.0 | **6.0.0** |
+  | Pillow | 10.0.0 | **12.3.0** (AVIF nativo) |
+  | tkinterdnd2 | 0.3.0 | **0.6.3** (macOS Intel y Apple Silicon incluidos) |
+  | python-dotenv | 1.0.0 | **1.2.4** |
+  | pillow-avif-plugin | 1.4.0 | **Retirado**: Pillow ya trae AVIF |
 
-  Los motores externos requieren **ffmpeg** en el PATH; si falta, la app lo detecta y sigue usando el estándar sin fallar. Ver la [comparativa completa](#-comparativa-de-métodos-de-conversión) con todas las mediciones.
+### Versión 1.5.0
 
-- **Comparativa de métodos documentada**: nueva sección del README con tiempos, pesos y calidad (SSIM) medidos para cada formato, nivel de calidad, esfuerzo y motor.
+- **Motor de codificación seleccionable** para AVIF, con descripciones en la interfaz que explican qué da cada uno, y detección automática de **ffmpeg**: si falta, la app sigue usando el motor estándar sin fallar.
+- **Comparativa de métodos documentada**: sección del README con tiempos, pesos y calidad (SSIM) medidos para cada formato, nivel de calidad, esfuerzo y motor.
 
 ### Versión 1.4.0
 
@@ -241,7 +244,7 @@ python -m unittest discover -s tests -v
 
 También funciona con pytest si lo prefieres (`pip install pytest && python -m pytest tests/ -q`).
 
-La suite cubre el motor de conversión (AVIF/WebP/JPG/PNG, transparencia, presets, sufijos), el redimensionado de ancho fijo y las variantes múltiples por archivo, la selección y el retroceso de los motores de codificación, la validación de disco y el parser de Drag & Drop. Las pruebas de los motores externos se saltan solas si ffmpeg no está instalado.
+La suite cubre el motor de conversión (AVIF/WebP/JPG/PNG, transparencia, presets, sufijos), el redimensionado de ancho fijo y las variantes múltiples por archivo, la selección y el retroceso de los motores de codificación, la validación de disco y el parser de Drag & Drop. Las pruebas de SVT-AV1 se saltan solas si ffmpeg no está instalado.
 
 ---
 
