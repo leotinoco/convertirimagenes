@@ -41,10 +41,18 @@ _FFMPEG_ENCODER = {
 # Hide the console window ffmpeg would otherwise flash for every image.
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
 
+# After this many failures in a row an engine is considered broken for the
+# rest of the session (ffmpeg removed from the PATH, encoder dropped from the
+# build, a codec that rejects every frame). Without it, a 500-image batch
+# would spawn 500 doomed processes and wait on each one before falling back.
+_MAX_CONSECUTIVE_FAILURES = 3
+
 _lock = threading.Lock()
 _probe_done = False
 _ffmpeg_path: str | None = None
 _available: set[str] = set()
+_failures: dict[str, int] = {}
+_disabled: set[str] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +102,39 @@ def engine_available(engine: str) -> bool:
     if engine == ENGINE_PILLOW:
         return True
     _probe()
-    return engine in _available
+    return engine in _available and engine not in _disabled
+
+
+def note_failure(engine: str, error: str = "") -> None:
+    """
+    Record that *engine* failed. Once it has failed repeatedly it is taken out
+    of service for the rest of the session so the remaining images in a batch
+    go straight to the built-in encoder instead of each paying for a doomed
+    ffmpeg launch.
+    """
+    if engine == ENGINE_PILLOW:
+        return
+    with _lock:
+        if engine in _disabled:
+            return
+        _failures[engine] = _failures.get(engine, 0) + 1
+        if _failures[engine] < _MAX_CONSECUTIVE_FAILURES:
+            return
+        _disabled.add(engine)
+    logger.warning(
+        "Engine '%s' failed %d times in a row and is disabled for this session; "
+        "remaining images use the built-in encoder. Last error: %s",
+        engine, _MAX_CONSECUTIVE_FAILURES, error[:200],
+    )
+
+
+def note_success(engine: str) -> None:
+    """Reset the failure streak after an engine works (failures must be consecutive)."""
+    if engine == ENGINE_PILLOW:
+        return
+    with _lock:
+        if engine in _failures and engine not in _disabled:
+            del _failures[engine]
 
 
 def available_engines() -> dict[str, bool]:

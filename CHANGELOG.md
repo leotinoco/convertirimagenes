@@ -5,6 +5,23 @@ Todas las novedades relevantes de este proyecto serán documentadas en este arch
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.7.0] - 2026-10-10
+
+### Añadido
+- ⚡ **Decodificación JPEG a escala reducida (`draft`)**: Cuando la salida es mucho más pequeña que el origen, se pide a libjpeg que decodifique directamente a 1/2, 1/4 u 1/8 en lugar de leer la imagen completa y reducirla después. Medido sobre 12 fotos de 4000×3000 a 1200px con 16 hilos:
+  - **2.07x más rápido** generando una versión (51.4 → 24.8 ms por salida).
+  - **2.73x más rápido** en doble conversión escritorio + móvil (45.1 → 16.5 ms por salida), porque la versión de 800px decodifica a 1/4 de escala.
+  - **Peso idéntico** (−0.4%) y sin pérdida visual: el reescalado LANCZOS sigue partiendo de una resolución superior a la de destino. Comprobado además que pedir más holgura de decodificación no cambia el resultado, así que la escala elegida no sacrifica calidad.
+  - Respeta la orientación EXIF: en fotos giradas un cuarto de vuelta los ejes se intercambian antes de calcular la escala, de modo que nunca se decodifica por debajo del objetivo.
+- 🛡️ **Retiro automático de motores averiados**: Si un motor externo falla 3 veces seguidas (ffmpeg retirado del PATH, codificador ausente del build), se desactiva para el resto de la sesión y el lote continúa con el motor integrado. Antes, un lote de 500 imágenes con el motor roto lanzaba 500 procesos condenados y esperaba por cada uno antes de retroceder.
+
+### Mejorado
+- ⚡ **Reescalado innecesario evitado**: Si la imagen ya tiene el tamaño pedido, se omite la llamada a `resize`.
+
+### Documentación
+- 📚 Re-medida completa de la comparativa del README tras la optimización, con las dependencias exactas de `requirements.txt`.
+- 📚 **Documentado un cambio de comportamiento que llegó con la 1.6.0**: el salto a Pillow 12.3 trajo una libavif más reciente que **recalibró la escala de calidad AVIF**. El mismo valor produce archivos más pesados que en la 1.5.0 (q60: 46.3 → 66.2 KB). Medido a calidad visual igualada, ambas comprimen prácticamente igual, así que cambió el mapeo y no la eficiencia: **q50 hoy equivale al q60 de antes** (SSIM 0.9520 vs 0.9526). Quien venga de la 1.5.0 y usara 60 debería bajar el deslizador a ~50 para conservar el peso de siempre. El valor predeterminado de la aplicación no se modificó.
+
 ## [1.6.0] - 2026-10-02
 
 ### Eliminado

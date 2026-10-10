@@ -5,7 +5,7 @@
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-![Version](https://img.shields.io/badge/version-1.6.0-orange)
+![Version](https://img.shields.io/badge/version-1.7.0-orange)
 
 Aplicación de escritorio profesional para la **conversión masiva de imágenes**, pensada como herramienta esencial del flujo de trabajo de desarrollo web: toma lotes grandes de imágenes (PNG, JPG, WebP, AVIF) y los convierte a formatos modernos y optimizados (**AVIF, WebP, JPG o PNG**) con control fino de calidad, metadatos y dimensiones. Interfaz moderna, procesamiento paralelo y soporte multiplataforma nativo.
 
@@ -51,7 +51,9 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 
 ## 📊 Comparativa de métodos de conversión
 
-Todas las cifras son **medidas reales**, no estimaciones. Metodología: 12 fotografías de 4000×3000 (JPG de **1171 KB** cada una) redimensionadas a **1200px de ancho**, con 16 hilos, en un Ryzen 7 3700X + RTX 5070. La calidad se mide con **SSIM** contra la imagen sin comprimir: 1.0000 sería idéntica, y por encima de ~0.95 la diferencia no se aprecia a simple vista en pantalla.
+Todas las cifras son **medidas reales**, no estimaciones. Metodología: 12 fotografías de 4000×3000 (JPG de **1171 KB** cada una) redimensionadas a **1200px de ancho**, con 16 hilos, en un Ryzen 7 3700X, usando las dependencias exactas de `requirements.txt`. La calidad se mide con **SSIM** contra la imagen sin comprimir: 1.0000 sería idéntica, y por encima de ~0.95 la diferencia no se aprecia a simple vista en pantalla.
+
+> ⚠️ **Si vienes de la 1.5.0 o anterior:** el salto a Pillow 12.3 trajo una libavif más reciente que **recalibró la escala de calidad AVIF**. El mismo número produce ahora archivos más pesados: q60 pasó de 46.3 a 66.2 KB. A calidad visual igualada ambas comprimen prácticamente igual, así que cambió el mapeo y no la eficiencia: **q50 hoy equivale al q60 de antes** (SSIM 0.9520 vs 0.9526). Si usabas 60, baja el deslizador a ~50 para conservar el peso de siempre.
 
 ### Resumen: mismo resultado visual, distinto coste
 
@@ -59,42 +61,44 @@ Estas cuatro filas producen prácticamente **la misma calidad** (SSIM ≈ 0.95).
 
 | Método | Peso | Reducción | Tiempo | Velocidad | Calidad |
 |---|---|---|---|---|---|
-| **AVIF · SVT-AV1** | **36.8 KB** 🥇 | 96.9% | 198 ms | ~5 img/s | 0.9514 |
-| AVIF · Estándar, esfuerzo Lento | 45.1 KB | 96.1% | 1279 ms | ~0.8 img/s | 0.9527 |
-| AVIF · Estándar, esfuerzo Equilibrado | 45.6 KB | 96.1% | 251 ms | ~4 img/s | 0.9515 |
-| **AVIF · Estándar, Ultra Rápido** | 47.0 KB | 96.0% | **48 ms** 🥇 | **~21 img/s** | 0.9491 |
-| JPG q75 *(referencia)* | 97.7 KB | 91.7% | 39 ms | ~26 img/s | 0.9558 |
+| **AVIF · SVT-AV1** (q60) | **36.8 KB** 🥇 | 96.9% | 147 ms | ~7 img/s | 0.9514 |
+| AVIF · Estándar q50, Equilibrado | 49.5 KB | 95.8% | ~250 ms | ~4 img/s | 0.9520 |
+| WebP q75 | 53.9 KB | 95.4% | 45 ms | ~22 img/s | 0.9444 |
+| JPG q75 *(referencia)* | 97.5 KB | 91.7% | **16 ms** | ~64 img/s | 0.9557 |
 
-> **Lectura rápida:** AVIF pesa **menos de la mitad que JPG** con la misma calidad. Dentro de AVIF, «Ultra Rápido» es **26x más rápido** que «Lento» y solo pesa 2 KB más — el esfuerzo alto casi no compensa. Si quieres el mínimo peso posible, SVT-AV1 quita otro 19%.
+> **Lectura rápida:** AVIF pesa **cerca de la mitad que JPG** con la misma calidad. Dentro de AVIF, «Ultra Rápido» es **~50x más rápido** que «Lento» con una diferencia de peso pequeña — el esfuerzo alto casi no compensa. Si quieres el mínimo peso posible, SVT-AV1 es el más liviano de todos.
 
 ### Efecto del esfuerzo de compresión (AVIF, calidad 60)
 
-| Esfuerzo | Tiempo | Peso | Calidad |
-|---|---|---|---|
-| Lento (2) | 1279 ms | 45.1 KB | 0.9527 |
-| Equilibrado (5) | 251 ms | 45.6 KB | 0.9515 |
-| **Ultra Rápido (8)** | **48 ms** | 47.0 KB | 0.9491 |
+| Esfuerzo | Tiempo | Velocidad | Peso | Calidad |
+|---|---|---|---|---|
+| Lento (2) | 1408 ms | ~0.7 img/s | 61.9 KB | 0.9636 |
+| Equilibrado (5) | 252 ms | ~4 img/s | 66.2 KB | 0.9648 |
+| **Ultra Rápido (8)** | **28 ms** | **~35 img/s** | 73.1 KB | 0.9665 |
 
-Subir el esfuerzo multiplica el tiempo por 26 para ahorrar un 4% de peso. **Para lotes grandes, «Ultra Rápido» es casi siempre la elección correcta.**
+Bajar el esfuerzo de «Lento» a «Ultra Rápido» acelera la conversión **~50x** a cambio de un 18% de peso, sin perder calidad visual. **Para lotes grandes, «Ultra Rápido» es casi siempre la elección correcta**; si el peso manda, el motor SVT-AV1 gana por mucho más margen que el esfuerzo alto.
 
 ### Efecto de la calidad (AVIF, esfuerzo Equilibrado)
 
 | Calidad | Peso | Reducción | Calidad visual | Notas |
 |---|---|---|---|---|
-| 45 | 17.2 KB | 98.5% | 0.8986 | Artefactos visibles en degradados y cielos |
-| **60** *(recomendado)* | 45.6 KB | 96.1% | 0.9515 | Punto dulce para web |
-| 75 | 78.2 KB | 93.3% | 0.9737 | Para fotografía destacada o hero images |
+| 40 | 29.6 KB | 97.5% | 0.9231 | Artefactos visibles en degradados y cielos |
+| 45 | 40.7 KB | 96.5% | 0.9419 | Aceptable para miniaturas |
+| **50** *(recomendado para web)* | 49.5 KB | 95.8% | 0.9520 | Punto dulce. Equivale al antiguo q60 |
+| 55 | 58.0 KB | 95.0% | 0.9593 | Un punto más de margen |
+| 60 | 66.2 KB | 94.3% | 0.9648 | Generoso; útil para fotografía destacada |
+| 75 | 106.6 KB | 90.9% | 0.9808 | Hero images y originales de archivo |
 
 ### Comparativa entre formatos de salida
 
 | Formato | Config | Peso | Reducción | Tiempo | Calidad | Cuándo usarlo |
 |---|---|---|---|---|---|---|
-| **AVIF** | q60 | **45.6 KB** | 96.1% | 251 ms | 0.9515 | Formato principal. La mejor compresión. |
-| **WebP** | q75 | 53.6 KB | 95.4% | 74 ms | 0.9446 | Respaldo para navegadores sin AVIF. |
-| WebP | q60 | 38.9 KB | 96.7% | 101 ms | 0.9286 | Calidad ya algo justa. |
-| **JPG** | q75 | 97.7 KB | 91.7% | 39 ms | 0.9558 | Compatibilidad universal. |
-| JPG | q85 | 136.7 KB | 88.3% | 51 ms | 0.9676 | Cuando no puedes usar formatos modernos. |
-| **PNG** | sin pérdida | 1301.3 KB | **+11% MAYOR** | 132 ms | 0.9933 | Solo logos y gráficos de tintas planas. |
+| **AVIF** | q50 | **49.5 KB** | 95.8% | ~250 ms | 0.9520 | Formato principal. La mejor compresión. |
+| **WebP** | q75 | 53.9 KB | 95.4% | 45 ms | 0.9444 | Respaldo para navegadores sin AVIF. |
+| WebP | q60 | 39.7 KB | 96.6% | 42 ms | 0.9296 | Calidad ya algo justa. |
+| **JPG** | q75 | 97.5 KB | 91.7% | 16 ms | 0.9557 | Compatibilidad universal. |
+| JPG | q85 | 136.3 KB | 88.4% | 16 ms | 0.9676 | Cuando no puedes usar formatos modernos. |
+| **PNG** | sin pérdida | 1321.7 KB | **+13% MAYOR** | 86 ms | 0.9925 | Solo logos y gráficos de tintas planas. |
 
 > ⚠️ **PNG no sirve para fotografías**: al ser sin pérdida, el resultado pesó *más que el JPG original*. Úsalo solo para logotipos, iconos y capturas con texto.
 
@@ -102,8 +106,8 @@ Subir el esfuerzo multiplica el tiempo por 26 para ahorrar un 4% de peso. **Para
 
 | | Estándar (CPU) | SVT-AV1 |
 |---|---|---|
-| **Velocidad** | 🥇 48 ms (Ultra Rápido) | 198 ms |
-| **Peso** | 47.0 KB | 🥇 36.8 KB |
+| **Velocidad** | 🥇 28 ms (Ultra Rápido) | 147 ms |
+| **Peso a igual calidad** | 49.5 KB | 🥇 36.8 KB |
 | **Conserva EXIF/IPTC** | ✅ Sí | ❌ No |
 | **Soporta transparencia** | ✅ Sí | ❌ Usa el estándar |
 | **Requiere ffmpeg** | No | Sí |
@@ -185,6 +189,7 @@ convertirimagenes/
 
 Detalles técnicos relevantes:
 
+- **Decodificación a escala reducida**: cuando la salida es mucho menor que el origen, se pide a libjpeg que decodifique directamente a 1/2, 1/4 u 1/8 (`Image.draft`) en vez de leer la imagen completa. El reescalado LANCZOS sigue partiendo de una resolución superior a la de destino, así que el peso y la calidad no cambian (−0.4% medido) pero la conversión va ~2x más rápido. Se respeta la orientación EXIF: en fotos giradas un cuarto de vuelta los ejes se intercambian antes de calcular la escala.
 - **Escritura atómica**: cada imagen se codifica a un archivo temporal y luego se mueve a su destino final, evitando archivos corruptos si el proceso se interrumpe.
 - **Paralelismo**: `ThreadPoolExecutor` — Pillow libera el GIL durante la codificación, por lo que los hilos escalan bien y comparten memoria de forma segura.
 - **AVIF nativo**: usa el soporte AVIF que Pillow trae de serie desde la 11.3 (libavif incluida en sus paquetes). `pillow-avif-plugin` solo se usa como respaldo si una instalación antigua de Pillow no tiene AVIF.
@@ -204,9 +209,15 @@ Detalles técnicos relevantes:
 
 ---
 
-## 🆕 Novedades de la versión 1.6.0
+## 🆕 Novedades de la versión 1.7.0
 
-Resumen de la última actualización (detalle completo en [CHANGELOG.md](CHANGELOG.md)):
+- **Conversión 2x más rápida**: la decodificación JPEG ahora se hace a escala reducida cuando la salida es mucho más pequeña que el origen. **2.07x** más rápido generando una versión y **2.73x** en doble conversión escritorio + móvil, con el mismo peso (−0.4%) y sin pérdida visual.
+- **Motores averiados se retiran solos**: si un motor externo falla 3 veces seguidas, el lote continúa con el integrado en vez de malgastar un proceso por imagen.
+- ⚠️ **Aviso para quien venga de la 1.5.0**: la escala de calidad AVIF se recalibró al pasar a Pillow 12.3. **q50 equivale hoy al antiguo q60**; si usabas 60, baja a ~50 para conservar el peso de siempre.
+
+### Versión 1.6.0
+
+Detalle completo en [CHANGELOG.md](CHANGELOG.md):
 
 - **Se retira el motor GPU NVIDIA**: las mediciones lo dejaban sin caso de uso (más lento que el estándar y más pesado que SVT-AV1). Quedan dos motores que cubren lo necesario: el **estándar**, el más rápido y sin programas externos, y **SVT-AV1**, para el mínimo peso. Ver [por qué](#los-dos-motores-de-codificación-avif).
 - **Dependencias al día**, probadas con la app real:

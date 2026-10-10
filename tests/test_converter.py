@@ -209,6 +209,132 @@ class TestConverter(unittest.TestCase):
         })
 
 
+class TestDraftDecode(unittest.TestCase):
+    """
+    The draft() fast path must speed up decoding without ever changing the
+    final dimensions, the orientation, or the pixels in a visible way.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp(prefix="draft_test_")
+
+        import random
+        rnd = random.Random(3)
+        big = Image.new("RGB", (2400, 1800))
+        big.putdata([
+            (min(255, x % 256 + rnd.randint(0, 25)),
+             min(255, y % 256 + rnd.randint(0, 25)),
+             (x + y) % 256)
+            for y in range(1800) for x in range(2400)
+        ])
+        cls.landscape = os.path.join(cls.tmp, "landscape.jpg")
+        big.save(cls.landscape, quality=90)
+
+        # Portrait photo stored rotated, flagged Orientation=6 (90° CW).
+        # Stored 2400x1800; after exif_transpose it becomes 1800x2400.
+        cls.rotated = os.path.join(cls.tmp, "rotated.jpg")
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        big.save(cls.rotated, quality=90, exif=exif)
+
+        cls.png = os.path.join(cls.tmp, "flat.png")
+        Image.new("RGB", (1000, 500), (30, 60, 90)).save(cls.png)
+
+    def _draft_size(self, path, resize_cfg):
+        from core.converter import _apply_draft
+        with Image.open(path) as im:
+            _apply_draft(im, resize_cfg)
+            return im.size
+
+    # -- the optimisation actually fires -------------------------------
+    def test_draft_reduces_decode_size_for_jpeg(self):
+        size = self._draft_size(self.landscape,
+                                {"enabled": True, "width": 600, "height": 0})
+        self.assertLess(size[0], 2400, "draft should pick a reduced DCT scale")
+        self.assertGreaterEqual(size[0], 600, "must still cover the target")
+
+    def test_draft_never_goes_below_target(self):
+        for width in (300, 600, 1200, 2000):
+            with self.subTest(width=width):
+                w, _ = self._draft_size(self.landscape,
+                                        {"enabled": True, "width": width, "height": 0})
+                self.assertGreaterEqual(w, width)
+
+    # -- the optimisation stays out of the way -------------------------
+    def test_no_draft_when_resize_disabled(self):
+        size = self._draft_size(self.landscape, {"enabled": False, "width": 600})
+        self.assertEqual(size, (2400, 1800))
+
+    def test_no_draft_without_cfg(self):
+        self.assertEqual(self._draft_size(self.landscape, None), (2400, 1800))
+
+    def test_png_is_unaffected(self):
+        size = self._draft_size(self.png,
+                                {"enabled": True, "width": 200, "height": 0})
+        self.assertEqual(size, (1000, 500))
+
+    def test_upscaling_does_not_shrink_source(self):
+        size = self._draft_size(self.landscape,
+                                {"enabled": True, "width": 4000, "height": 0})
+        self.assertEqual(size, (2400, 1800))
+
+    # -- rotated photos: the axis swap must be honoured ----------------
+    def test_rotated_photo_keeps_enough_resolution(self):
+        """
+        Target width 600 on a photo that exif_transpose turns portrait:
+        600 maps onto the *stored* height, so the draft must not go below it.
+        """
+        w, h = self._draft_size(self.rotated,
+                                {"enabled": True, "width": 600, "height": 0})
+        self.assertGreaterEqual(h, 600, f"stored height {h} fell below target")
+
+    def test_rotated_photo_final_size_is_exact(self):
+        from core.converter import Converter
+        from core import encoders  # noqa: F401
+        conv = Converter()
+        out_dir = os.path.join(self.tmp, "rot_out")
+        os.makedirs(out_dir, exist_ok=True)
+        r = conv.convert_one(
+            self.rotated, out_dir, quality=60, output_format="png",
+            resize_cfg={"enabled": True, "width": 600, "height": 0},
+            keep_exif=False,
+        )
+        self.assertTrue(r.success, msg=r.error)
+        with Image.open(r.output_path) as img:
+            # 2400x1800 stored + Orientation 6 → 1800x2400 upright,
+            # so width 600 must give height 800.
+            self.assertEqual(img.size, (600, 800))
+
+    def test_landscape_final_size_is_exact(self):
+        from core.converter import Converter
+        conv = Converter()
+        out_dir = os.path.join(self.tmp, "land_out")
+        os.makedirs(out_dir, exist_ok=True)
+        r = conv.convert_one(
+            self.landscape, out_dir, quality=60, output_format="png",
+            resize_cfg={"enabled": True, "width": 600, "height": 0},
+            keep_exif=False,
+        )
+        self.assertTrue(r.success, msg=r.error)
+        with Image.open(r.output_path) as img:
+            self.assertEqual(img.size, (600, 450))
+
+    def test_explicit_width_and_height_still_exact(self):
+        from core.converter import Converter
+        conv = Converter()
+        out_dir = os.path.join(self.tmp, "wh_out")
+        os.makedirs(out_dir, exist_ok=True)
+        r = conv.convert_one(
+            self.landscape, out_dir, quality=60, output_format="png",
+            resize_cfg={"enabled": True, "width": 500, "height": 500},
+            keep_exif=False,
+        )
+        self.assertTrue(r.success, msg=r.error)
+        with Image.open(r.output_path) as img:
+            self.assertEqual(img.size, (500, 500))
+
+
 class TestEncoderSelection(unittest.TestCase):
     """Engine routing rules — these hold with or without ffmpeg installed."""
 
@@ -257,6 +383,54 @@ class TestEncoderSelection(unittest.TestCase):
     def test_alpha_images_fall_back(self):
         from core import encoders
         self.assertFalse(encoders.can_encode(encoders.ENGINE_SVTAV1, "avif", True))
+
+    def test_repeated_failures_retire_an_engine(self):
+        """A broken encoder must not cost one doomed ffmpeg launch per image."""
+        from core import encoders
+        eng = encoders.ENGINE_SVTAV1
+        orig_avail = set(encoders._available)
+        orig_disabled = set(encoders._disabled)
+        orig_failures = dict(encoders._failures)
+        try:
+            encoders._available.add(eng)
+            encoders._disabled.discard(eng)
+            encoders._failures.pop(eng, None)
+
+            for _ in range(encoders._MAX_CONSECUTIVE_FAILURES - 1):
+                encoders.note_failure(eng, "boom")
+                self.assertTrue(encoders.engine_available(eng),
+                                "must tolerate a one-off failure")
+
+            encoders.note_failure(eng, "boom")
+            self.assertFalse(encoders.engine_available(eng),
+                             "should be retired after the streak")
+            self.assertFalse(encoders.can_encode(eng, "avif", False))
+        finally:
+            encoders._available = orig_avail
+            encoders._disabled = orig_disabled
+            encoders._failures = orig_failures
+
+    def test_success_resets_the_failure_streak(self):
+        from core import encoders
+        eng = encoders.ENGINE_SVTAV1
+        orig_avail = set(encoders._available)
+        orig_disabled = set(encoders._disabled)
+        orig_failures = dict(encoders._failures)
+        try:
+            encoders._available.add(eng)
+            encoders._disabled.discard(eng)
+            encoders._failures.pop(eng, None)
+
+            encoders.note_failure(eng, "blip")
+            encoders.note_success(eng)
+            # Streak reset, so another near-miss still leaves it usable.
+            for _ in range(encoders._MAX_CONSECUTIVE_FAILURES - 1):
+                encoders.note_failure(eng, "blip")
+            self.assertTrue(encoders.engine_available(eng))
+        finally:
+            encoders._available = orig_avail
+            encoders._disabled = orig_disabled
+            encoders._failures = orig_failures
 
     def test_unknown_engine_raises(self):
         from core import encoders

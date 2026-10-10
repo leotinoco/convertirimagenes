@@ -4,6 +4,7 @@
 customtkinter>=6.0.0
 # Pillow ships native AVIF (bundled libavif) since 11.3, so pillow-avif-plugin
 # is no longer needed: on Pillow 12 it produced byte-identical files.
+# 11.3 is also the floor for the reduced-scale JPEG decode fast path.
 Pillow>=12.3.0
 piexif>=1.1.3
 darkdetect>=0.8.0
