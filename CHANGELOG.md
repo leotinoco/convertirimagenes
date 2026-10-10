@@ -27,6 +27,7 @@ y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Documentación
 - 📚 Re-medida completa de la comparativa del README tras la optimización, con las dependencias exactas de `requirements.txt`.
+- 📚 **Tabla de características al día**: el ahorro de SVT-AV1 se corrige a ~25% (venía de un cálculo con la base de peso anterior) y se indica la calidad predeterminada y el retiro automático de motores.
 - 📚 **Documentado un cambio de comportamiento que llegó con la 1.6.0**: el salto a Pillow 12.3 trajo una libavif más reciente que **recalibró la escala de calidad AVIF**. El mismo valor produce archivos más pesados que en la 1.5.0 (q60: 46.3 → 66.2 KB). Medido a calidad visual igualada, ambas comprimen prácticamente igual, así que cambió el mapeo y no la eficiencia: **q50 hoy equivale al q60 de antes** (SSIM 0.9520 vs 0.9526). Quien venga de la 1.5.0 y usara 60 debería bajar el deslizador a ~50 para conservar el peso de siempre; el valor predeterminado ya se ajustó a 50 por este motivo.
 
 ## [1.6.0] - 2026-10-02

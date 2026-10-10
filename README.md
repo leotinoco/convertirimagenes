@@ -33,12 +33,12 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 | **Destino de salida** | Guardar junto al original o en una carpeta personalizada, con sufijo opcional (ej. `foto-opt.avif`). |
 | **Progreso y cancelación** | Barra de progreso en tiempo real (n/total), botón de cancelar y resumen de ahorro total al finalizar. |
 | **Auto-orientación EXIF** | Las fotos de móvil/cámara nunca salen giradas: los píxeles se rotan y el tag Orientation se restablece. |
-| **Calidad configurable** | Slider de calidad 0–100, esfuerzo de compresión AVIF y submuestreo de color (4:2:0 / 4:4:4). |
+| **Calidad configurable** | Slider de calidad 0–100 (por defecto **50**, el punto dulce medido para web), esfuerzo de compresión AVIF y submuestreo de color (4:2:0 / 4:4:4). |
 | **Transparencia** | Canal alpha preservado en AVIF/WebP/PNG (con 4:4:4 forzado en AVIF); fusión sobre fondo blanco en JPG. |
 | **JPEG progresivo** | Salida JPEG con `optimize` + `progressive` para mejor carga percibida en la web. |
 | **Redimensionado** | Modo "Ancho fijo" con alto proporcional automático por imagen (sin distorsión), o ancho y alto personalizados. Redimensionado LANCZOS. |
 | **Doble conversión** | Genera dos versiones por imagen en un solo lote (ej. 1200px escritorio + 800px móvil) con sufijos automáticos `_1200px` / `_800px` y vista previa del nombre de salida. |
-| **Motor de codificación** | Dos codificadores AVIF seleccionables con descripción comparativa en la interfaz: estándar (CPU, el más rápido, sin programas externos) y SVT-AV1 (~20% menos peso a igual calidad). |
+| **Motor de codificación** | Dos codificadores AVIF seleccionables con descripción comparativa en la interfaz: estándar (CPU, el más rápido, sin programas externos) y SVT-AV1 (~25% menos peso a igual calidad). Si un motor externo falla repetidamente se retira solo y el lote continúa con el integrado. |
 | **Metadatos** | Preservación selectiva de EXIF e IPTC, y editor integrado (Autor, Título, Copyright, fechas, descripción). |
 | **Drag & Drop** | Soporte nativo robusto en Windows, macOS y Linux (rutas con espacios, URIs `file://`, multi-archivo). |
 | **Vista previa** | Comparativa Antes/Después con dimensiones, tamaños y % de ahorro. |
@@ -214,6 +214,7 @@ Detalles técnicos relevantes:
 - **Conversión 2x más rápida**: la decodificación JPEG ahora se hace a escala reducida cuando la salida es mucho más pequeña que el origen. **2.07x** más rápido generando una versión y **2.73x** en doble conversión escritorio + móvil, con el mismo peso (−0.4%) y sin pérdida visual.
 - **Motores averiados se retiran solos**: si un motor externo falla 3 veces seguidas, el lote continúa con el integrado en vez de malgastar un proceso por imagen.
 - **Calidad predeterminada ajustada a 50**: la escala de calidad AVIF se recalibró al pasar a Pillow 12.3, así que **q50 equivale hoy al antiguo q60**. Mismo resultado visual, archivos bastante más livianos. Si preferías el comportamiento anterior, sube el deslizador a ~60.
+- **Compatible con Python 3.15** (y 3.14), verificado en entorno limpio: todas las dependencias tienen wheel y el Drag & Drop funciona con el Tcl/Tk 9.0 que trae 3.15. El mínimo sigue siendo 3.10.
 
 ### Versión 1.6.0
 
