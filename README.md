@@ -121,7 +121,7 @@ Bajar el esfuerzo de «Lento» a «Ultra Rápido» acelera la conversión **~50x
 
 ### 1. Requisitos previos
 
-- **Python 3.10+**
+- **Python 3.10+**. Probado en **3.12, 3.13, 3.14 y 3.15** (3.15 incluye Tcl/Tk 9.0 y también funciona el Drag & Drop). No se exige una versión más nueva porque el código no usa nada posterior a 3.10.
 - (Recomendado) Entorno virtual: `python -m venv venv`
 - (Opcional) **ffmpeg** en el `PATH` — solo si quieres el motor de máxima compresión (SVT-AV1). Sin él la app funciona igual con el motor estándar.
 

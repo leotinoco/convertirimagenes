@@ -21,6 +21,10 @@ y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
 ### Mejorado
 - ⚡ **Reescalado innecesario evitado**: Si la imagen ya tiene el tamaño pedido, se omite la llamada a `resize`.
 
+### Verificado
+- ✅ **Python 3.15** (publicado el 9-10-2026): 61/61 pruebas e interfaz real en un entorno limpio instalado desde `requirements.txt`. Todas las dependencias tienen wheel para 3.15 (Pillow `cp315`), el AVIF nativo funciona y el Drag & Drop opera con el **Tcl/Tk 9.0** que trae esa versión. También verificado en **3.14** (Tk 8.6).
+- ✅ **Mínimo mantenido en 3.10**: el código no usa sintaxis ni API posteriores (comprobado analizando todos los módulos contra la gramática de 3.10), así que subir el mínimo solo dejaría fuera usuarios sin aportar nada.
+
 ### Documentación
 - 📚 Re-medida completa de la comparativa del README tras la optimización, con las dependencias exactas de `requirements.txt`.
 - 📚 **Documentado un cambio de comportamiento que llegó con la 1.6.0**: el salto a Pillow 12.3 trajo una libavif más reciente que **recalibró la escala de calidad AVIF**. El mismo valor produce archivos más pesados que en la 1.5.0 (q60: 46.3 → 66.2 KB). Medido a calidad visual igualada, ambas comprimen prácticamente igual, así que cambió el mapeo y no la eficiencia: **q50 hoy equivale al q60 de antes** (SSIM 0.9520 vs 0.9526). Quien venga de la 1.5.0 y usara 60 debería bajar el deslizador a ~50 para conservar el peso de siempre; el valor predeterminado ya se ajustó a 50 por este motivo.
