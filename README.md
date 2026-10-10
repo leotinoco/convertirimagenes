@@ -53,7 +53,7 @@ Optimizar imágenes es uno de los pasos con mayor impacto en el rendimiento de u
 
 Todas las cifras son **medidas reales**, no estimaciones. Metodología: 12 fotografías de 4000×3000 (JPG de **1171 KB** cada una) redimensionadas a **1200px de ancho**, con 16 hilos, en un Ryzen 7 3700X, usando las dependencias exactas de `requirements.txt`. La calidad se mide con **SSIM** contra la imagen sin comprimir: 1.0000 sería idéntica, y por encima de ~0.95 la diferencia no se aprecia a simple vista en pantalla.
 
-> ⚠️ **Si vienes de la 1.5.0 o anterior:** el salto a Pillow 12.3 trajo una libavif más reciente que **recalibró la escala de calidad AVIF**. El mismo número produce ahora archivos más pesados: q60 pasó de 46.3 a 66.2 KB. A calidad visual igualada ambas comprimen prácticamente igual, así que cambió el mapeo y no la eficiencia: **q50 hoy equivale al q60 de antes** (SSIM 0.9520 vs 0.9526). Si usabas 60, baja el deslizador a ~50 para conservar el peso de siempre.
+> ⚠️ **Si vienes de la 1.5.0 o anterior:** el salto a Pillow 12.3 trajo una libavif más reciente que **recalibró la escala de calidad AVIF**. El mismo número produce ahora archivos más pesados: q60 pasó de 46.3 a 66.2 KB. A calidad visual igualada ambas comprimen prácticamente igual, así que cambió el mapeo y no la eficiencia: **q50 hoy equivale al q60 de antes** (SSIM 0.9520 vs 0.9526). Si usabas 60, baja el deslizador a ~50 para conservar el peso de siempre; el valor predeterminado ya viene en 50 desde la 1.7.0.
 
 ### Resumen: mismo resultado visual, distinto coste
 
@@ -84,7 +84,7 @@ Bajar el esfuerzo de «Lento» a «Ultra Rápido» acelera la conversión **~50x
 |---|---|---|---|---|
 | 40 | 29.6 KB | 97.5% | 0.9231 | Artefactos visibles en degradados y cielos |
 | 45 | 40.7 KB | 96.5% | 0.9419 | Aceptable para miniaturas |
-| **50** *(recomendado para web)* | 49.5 KB | 95.8% | 0.9520 | Punto dulce. Equivale al antiguo q60 |
+| **50** *(predeterminado)* | 49.5 KB | 95.8% | 0.9520 | Punto dulce para web. Equivale al antiguo q60 |
 | 55 | 58.0 KB | 95.0% | 0.9593 | Un punto más de margen |
 | 60 | 66.2 KB | 94.3% | 0.9648 | Generoso; útil para fotografía destacada |
 | 75 | 106.6 KB | 90.9% | 0.9808 | Hero images y originales de archivo |
@@ -213,7 +213,7 @@ Detalles técnicos relevantes:
 
 - **Conversión 2x más rápida**: la decodificación JPEG ahora se hace a escala reducida cuando la salida es mucho más pequeña que el origen. **2.07x** más rápido generando una versión y **2.73x** en doble conversión escritorio + móvil, con el mismo peso (−0.4%) y sin pérdida visual.
 - **Motores averiados se retiran solos**: si un motor externo falla 3 veces seguidas, el lote continúa con el integrado en vez de malgastar un proceso por imagen.
-- ⚠️ **Aviso para quien venga de la 1.5.0**: la escala de calidad AVIF se recalibró al pasar a Pillow 12.3. **q50 equivale hoy al antiguo q60**; si usabas 60, baja a ~50 para conservar el peso de siempre.
+- **Calidad predeterminada ajustada a 50**: la escala de calidad AVIF se recalibró al pasar a Pillow 12.3, así que **q50 equivale hoy al antiguo q60**. Mismo resultado visual, archivos bastante más livianos. Si preferías el comportamiento anterior, sube el deslizador a ~60.
 
 ### Versión 1.6.0
 

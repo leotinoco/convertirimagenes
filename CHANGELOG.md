@@ -15,12 +15,15 @@ y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
   - Respeta la orientación EXIF: en fotos giradas un cuarto de vuelta los ejes se intercambian antes de calcular la escala, de modo que nunca se decodifica por debajo del objetivo.
 - 🛡️ **Retiro automático de motores averiados**: Si un motor externo falla 3 veces seguidas (ffmpeg retirado del PATH, codificador ausente del build), se desactiva para el resto de la sesión y el lote continúa con el motor integrado. Antes, un lote de 500 imágenes con el motor roto lanzaba 500 procesos condenados y esperaba por cada uno antes de retroceder.
 
+### Cambiado
+- 🎚️ **Calidad predeterminada 65 → 50**: ajustada a la escala recalibrada que llegó con Pillow 12.3 (ver más abajo). Da el mismo resultado visual que el 65 anterior con archivos bastante más livianos, que es lo que busca una herramienta de optimización web. Si preferías el comportamiento anterior, sube el deslizador a ~60.
+
 ### Mejorado
 - ⚡ **Reescalado innecesario evitado**: Si la imagen ya tiene el tamaño pedido, se omite la llamada a `resize`.
 
 ### Documentación
 - 📚 Re-medida completa de la comparativa del README tras la optimización, con las dependencias exactas de `requirements.txt`.
-- 📚 **Documentado un cambio de comportamiento que llegó con la 1.6.0**: el salto a Pillow 12.3 trajo una libavif más reciente que **recalibró la escala de calidad AVIF**. El mismo valor produce archivos más pesados que en la 1.5.0 (q60: 46.3 → 66.2 KB). Medido a calidad visual igualada, ambas comprimen prácticamente igual, así que cambió el mapeo y no la eficiencia: **q50 hoy equivale al q60 de antes** (SSIM 0.9520 vs 0.9526). Quien venga de la 1.5.0 y usara 60 debería bajar el deslizador a ~50 para conservar el peso de siempre. El valor predeterminado de la aplicación no se modificó.
+- 📚 **Documentado un cambio de comportamiento que llegó con la 1.6.0**: el salto a Pillow 12.3 trajo una libavif más reciente que **recalibró la escala de calidad AVIF**. El mismo valor produce archivos más pesados que en la 1.5.0 (q60: 46.3 → 66.2 KB). Medido a calidad visual igualada, ambas comprimen prácticamente igual, así que cambió el mapeo y no la eficiencia: **q50 hoy equivale al q60 de antes** (SSIM 0.9520 vs 0.9526). Quien venga de la 1.5.0 y usara 60 debería bajar el deslizador a ~50 para conservar el peso de siempre; el valor predeterminado ya se ajustó a 50 por este motivo.
 
 ## [1.6.0] - 2026-10-02
 

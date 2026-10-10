@@ -341,7 +341,10 @@ class MainWindow(ctk.CTk):
 
         ctk.CTkLabel(self._q_frame, textvariable=I18N.tvar(self._q_frame, "q_lbl"),
                      font=theme.font(12), text_color=theme.TEXT).grid(row=0, column=0, sticky="w")
-        self._quality_var = tk.IntVar(value=65)
+        # 50 is the measured sweet spot for web since Pillow 12.3 recalibrated
+        # the AVIF quality scale: same visual result as the old 65, far lighter
+        # files (see the comparison table in the README).
+        self._quality_var = tk.IntVar(value=50)
         ctk.CTkLabel(self._q_frame, textvariable=self._quality_var,
                      font=theme.font(12, "bold"), text_color=theme.ACCENT_TEXT).grid(row=0, column=2, sticky="e")
         ctk.CTkSlider(
