@@ -5,6 +5,14 @@ Todas las novedades relevantes de este proyecto serán documentadas en este arch
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.7.1] - 2026-10-16
+
+### Corregido
+- 🐛 **Arranque con varias versiones de Python instaladas**: Las dependencias se instalan por intérprete, así que instalar un Python nuevo puede tomar el control del `PATH` y dejar la aplicación apuntando a uno sin paquetes, fallando con `ModuleNotFoundError: No module named 'customtkinter'`. `ConvertirImagenes.bat` ahora comprueba las dependencias antes de arrancar y, si faltan, muestra **qué intérprete está usando**, su versión y el comando exacto para instalarlas, en lugar de un traceback.
+
+### Documentación
+- 📚 Añadida al README la guía para diagnosticar y resolver ese caso.
+
 ## [1.7.0] - 2026-10-10
 
 ### Añadido

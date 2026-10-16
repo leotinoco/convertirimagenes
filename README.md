@@ -5,7 +5,7 @@
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-![Version](https://img.shields.io/badge/version-1.7.0-orange)
+![Version](https://img.shields.io/badge/version-1.7.1-orange)
 
 Aplicación de escritorio profesional para la **conversión masiva de imágenes**, pensada como herramienta esencial del flujo de trabajo de desarrollo web: toma lotes grandes de imágenes (PNG, JPG, WebP, AVIF) y los convierte a formatos modernos y optimizados (**AVIF, WebP, JPG o PNG**) con control fino de calidad, metadatos y dimensiones. Interfaz moderna, procesamiento paralelo y soporte multiplataforma nativo.
 
@@ -130,6 +130,8 @@ Bajar el esfuerzo de «Lento» a «Ultra Rápido» acelera la conversión **~50x
 ```bash
 pip install -r requirements.txt
 ```
+
+> **¿Tienes varias versiones de Python instaladas?** Las dependencias se instalan *por intérprete*. Si instalas una versión nueva, puede tomar el control del `PATH` y dejar la app apuntando a un Python sin paquetes (`ModuleNotFoundError: No module named 'customtkinter'`). Comprueba cuál se usa con `python -c "import sys; print(sys.executable)"` e instala ahí con `python -m pip install -r requirements.txt`, o lanza la app con la versión que prefieras: `py -3.13 app.py`. El `.bat` de Windows detecta este caso y te lo indica.
 
 > **¿Vienes de una versión anterior?** Ejecuta `pip install --upgrade -r requirements.txt`. Ya no hacen falta `pillow-avif-plugin` (Pillow trae AVIF propio) ni, en macOS, el fork `tkinterdnd2-universal` (el paquete oficial ya incluye Intel y Apple Silicon); puedes desinstalarlos.
 
