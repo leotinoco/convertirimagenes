@@ -8,7 +8,21 @@ y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
 ## [Sin publicar]
 
 ### Añadido
-- 🖱️ **Instalador de un solo clic para Windows** (`Instalar.bat` + `Instalar.ps1`): detecta Python 3.10+ (py launcher, `PATH` y rutas habituales); si no hay, descarga el instalador oficial de python.org, verifica su firma digital y lo instala en silencio solo para el usuario (sin administrador, sin tocar el `PATH`). Instala las dependencias en un entorno virtual propio, crea el acceso directo del Escritorio apuntando a ese Python (sin depender del `PATH`) y abre la aplicación. Es idempotente y muestra mensajes en español con pausa final.
+- 🖱️ **Instalador de un solo clic para Windows** (`Instalar.bat` + `Instalar.ps1`): pensado para quien no sabe de Python, basta un doble clic. `Instalar.bat` solo lanza `Instalar.ps1` (con la política de ejecución saltada únicamente para ese proceso, sin cambiar ninguna configuración de Windows) y mantiene la ventana abierta con el resultado. El instalador sigue cuatro pasos:
+  - **Busca Python 3.10+** con `tkinter`, `venv` y `pip` (py launcher, `PATH` y carpetas habituales) y elige la versión más alta. Descarta el alias de la Microsoft Store y los Python que viven dentro de un entorno virtual ajeno.
+  - **Si no hay ninguno, lo instala solo**: descarga Python 3.13 de python.org (x64 o ARM64; prueba 3.13.17, 3.13.16 y 3.13.15 por si se retira alguna), **verifica que esté firmado por la Python Software Foundation** y lo instala en silencio **solo para el usuario**: sin administrador, sin tocar el `PATH` ni otros Python ya instalados. Se elige 3.13 y no la última versión para que todas las dependencias tengan wheel.
+  - **Crea un entorno virtual propio** en `%LOCALAPPDATA%\ConvertirImagenes` e instala ahí `requirements.txt`; el Python del sistema nunca se modifica.
+  - **Crea el acceso directo «Convertir Imagenes» en el Escritorio**, apuntando directamente al Python de ese entorno (sin depender del `PATH`, lo que evita el caso descrito en la 1.7.1), y abre la aplicación.
+- 🔁 **Instalación idempotente y sin permisos elevados**: cada paso se omite si ya está hecho (entorno sano, dependencias importables, acceso directo que se sobrescribe sin duplicarse), así que se puede volver a ejecutar para reparar o tras mover la carpeta del programa. Un entorno dañado o que apunta a un Python que ya no existe se recrea. No pide administrador en ningún momento. Si algo falla, termina con código 1, explica el motivo en español y retoma lo pendiente al reejecutarlo.
+- ⚙️ **Parámetros opcionales de `Instalar.ps1`** (también se pasan a `Instalar.bat`, p. ej. `Instalar.bat -SinAbrir`):
+  - `-DirDatos`: dónde se guarda el entorno virtual (por defecto `%LOCALAPPDATA%\ConvertirImagenes`).
+  - `-DirEscritorio`: dónde se crea el acceso directo (por defecto, el Escritorio del usuario).
+  - `-SinAbrir`: no abre la aplicación al terminar.
+  - `-ProbarDescarga`: finge que no hay Python, descarga y verifica el instalador oficial, pero **no lo ejecuta ni cambia nada más**.
+
+### Documentación
+- 📚 Nueva sección del README **«Instalación para usuarios (Windows, sin conocimientos técnicos)»**: pasos con doble clic en `Instalar.bat`, qué hace el instalador si no hay Python, requisitos (Windows de 64 bits e Internet la primera vez), dónde queda instalado, cómo reejecutarlo y cómo desinstalar.
+- 📚 Aclarado en el README que `ConvertirImagenes.bat` y `python app.py` siguen siendo la vía para quien ya tiene Python y las dependencias, y que el instalador no los sustituye ni los modifica.
 
 ## [1.7.1] - 2026-10-16
 

@@ -127,13 +127,37 @@ Bajar el esfuerzo de «Lento» a «Ultra Rápido» acelera la conversión **~50x
    - crea el acceso directo **Convertir Imagenes** en el Escritorio y abre la aplicación.
 4. Desde entonces, abre la app con el icono del Escritorio.
 
-Necesita Windows de 64 bits y conexión a Internet la primera vez. Es **idempotente**: puedes ejecutar `Instalar.bat` otra vez cuando quieras (por ejemplo, si mueves la carpeta del programa) y solo rehará lo que falte, sin duplicar accesos directos. Si algo falla, la ventana se queda abierta con el motivo; basta con volver a ejecutarlo.
+**Requisitos:** Windows de 64 bits (x64 o ARM64) y conexión a Internet la primera vez (para las dependencias y, si hace falta, para Python). No necesitas ser administrador ni tener Python instalado.
 
-> Para desinstalar: borra el acceso directo, la carpeta del programa y `%LOCALAPPDATA%\ConvertirImagenes`. (Si el instalador tuvo que instalar Python, aparece en *Configuración → Aplicaciones* como "Python 3.13" y puedes quitarlo ahí.)
+**¿Y si no tengo Python?** El instalador lo resuelve solo: descarga Python 3.13 desde python.org, comprueba que esté firmado por la Python Software Foundation (si la firma no es válida, no lo ejecuta) y lo instala en silencio solo para tu usuario. No toca el `PATH` ni otros Python que ya tengas. Si ya tienes un Python 3.10+ con `tkinter`, lo usa y no descarga nada.
+
+**¿Dónde queda instalado?** El programa sigue en la carpeta que extrajiste. Las dependencias viven en un entorno propio en `%LOCALAPPDATA%\ConvertirImagenes\venv`, y el acceso directo del Escritorio apunta al Python de ese entorno, así que funciona aunque el `PATH` apunte a otra versión. No se modifica ningún Python del sistema.
+
+**Es idempotente:** puedes ejecutar `Instalar.bat` otra vez cuando quieras (para reparar, o tras mover la carpeta del programa) y solo rehará lo que falte, sin duplicar accesos directos. Si algo falla, la ventana se queda abierta con el motivo; basta con volver a ejecutarlo.
+
+<details>
+<summary>Opciones avanzadas de <code>Instalar.bat</code></summary>
+
+Se pasan igual que a `Instalar.ps1`, por ejemplo `Instalar.bat -SinAbrir`:
+
+| Opción | Efecto |
+|---|---|
+| `-DirDatos <ruta>` | Dónde se guarda el entorno virtual (por defecto `%LOCALAPPDATA%\ConvertirImagenes`). |
+| `-DirEscritorio <ruta>` | Dónde se crea el acceso directo (por defecto, tu Escritorio). |
+| `-SinAbrir` | No abre la aplicación al terminar. |
+| `-ProbarDescarga` | Prueba: descarga y verifica el instalador de Python, pero no lo ejecuta ni cambia nada más. |
+
+</details>
+
+> **Para desinstalar:** borra el acceso directo **Convertir Imagenes** del Escritorio, la carpeta del programa y `%LOCALAPPDATA%\ConvertirImagenes`. (Si el instalador tuvo que instalar Python, aparece en *Configuración → Aplicaciones* como "Python 3.13" y puedes quitarlo ahí; si ya lo tenías, no lo toques.)
+
+> Si ya tienes Python y prefieres no usar el instalador, sigue con la sección siguiente.
 
 ---
 
-## 🚀 Instalación y Uso
+## 🚀 Instalación y Uso (si ya tienes Python o usas macOS/Linux)
+
+Esta es la vía manual, para quien ya tiene Python o trabaja en macOS/Linux. En Windows, si no quieres tocar nada, usa `Instalar.bat` (sección anterior).
 
 ### 1. Requisitos previos
 
@@ -157,7 +181,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-En Windows también puedes hacer doble clic en `ConvertirImagenes.bat`.
+En Windows también puedes hacer doble clic en `ConvertirImagenes.bat`: usa el Python del `PATH`, así que requiere haber instalado las dependencias en él (si faltan, te lo indica). Si instalaste con `Instalar.bat` no lo necesitas: usa el acceso directo del Escritorio, que lleva su propio entorno.
 
 ### 4. Flujo de trabajo típico
 
