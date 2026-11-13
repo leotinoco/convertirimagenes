@@ -5,6 +5,11 @@ Todas las novedades relevantes de este proyecto serán documentadas en este arch
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el versionado sigue [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Añadido
+- 🖱️ **Instalador de un solo clic para Windows** (`Instalar.bat` + `Instalar.ps1`): detecta Python 3.10+ (py launcher, `PATH` y rutas habituales); si no hay, descarga el instalador oficial de python.org, verifica su firma digital y lo instala en silencio solo para el usuario (sin administrador, sin tocar el `PATH`). Instala las dependencias en un entorno virtual propio, crea el acceso directo del Escritorio apuntando a ese Python (sin depender del `PATH`) y abre la aplicación. Es idempotente y muestra mensajes en español con pausa final.
+
 ## [1.7.1] - 2026-10-16
 
 ### Corregido

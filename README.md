@@ -117,6 +117,22 @@ Bajar el esfuerzo de «Lento» a «Ultra Rápido» acelera la conversión **~50x
 
 ---
 
+## 💻 Instalación para usuarios (Windows, sin conocimientos técnicos)
+
+1. Descarga el proyecto (**Code → Download ZIP**) y **extrae toda la carpeta** (clic derecho → *Extraer todo*).
+2. Haz **doble clic en `Instalar.bat`**. Si Windows muestra un aviso azul de SmartScreen, pulsa *Más información → Ejecutar de todas formas*.
+3. Espera. El instalador, sin que tengas que hacer nada:
+   - busca Python 3.10+ y, si no lo hay, descarga el instalador oficial de python.org (comprobando su firma digital) y lo instala **solo para tu usuario** (sin administrador, sin tocar el `PATH` ni otros Python);
+   - instala las dependencias en un entorno propio (`%LOCALAPPDATA%\ConvertirImagenes`), así que **no modifica ningún Python del sistema**;
+   - crea el acceso directo **Convertir Imagenes** en el Escritorio y abre la aplicación.
+4. Desde entonces, abre la app con el icono del Escritorio.
+
+Necesita Windows de 64 bits y conexión a Internet la primera vez. Es **idempotente**: puedes ejecutar `Instalar.bat` otra vez cuando quieras (por ejemplo, si mueves la carpeta del programa) y solo rehará lo que falte, sin duplicar accesos directos. Si algo falla, la ventana se queda abierta con el motivo; basta con volver a ejecutarlo.
+
+> Para desinstalar: borra el acceso directo, la carpeta del programa y `%LOCALAPPDATA%\ConvertirImagenes`. (Si el instalador tuvo que instalar Python, aparece en *Configuración → Aplicaciones* como "Python 3.13" y puedes quitarlo ahí.)
+
+---
+
 ## 🚀 Instalación y Uso
 
 ### 1. Requisitos previos
